@@ -1,15 +1,21 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import logging
 
-from app.api import assessments, referrals
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
+# Create FastAPI app
 app = FastAPI(
     title="MAMA-AI API",
-    description="AI-Powered Maternal Emergency Intelligence Platform for Rural Ghana",
-    version="1.0.0"
+    description="AI-Powered Maternal Emergency, Referral, and Safe Birth Ecosystem",
+    version="1.0.0",
+    docs_url="/docs",
+    redoc_url="/redoc"
 )
 
-# CORS
+# CORS - Allow mobile apps
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -18,16 +24,30 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+# Import routers
+from app.api import (
+    assessments, referrals, facilities, 
+    economics, waiting_centers, access_risk,
+    patients, auth
+)
+
 # Include routers
-app.include_router(assessments.router, prefix="/api/v1", tags=["Assessments"])
+app.include_router(assessments.router, prefix="/api/v1/assessments", tags=["Assessments"])
 app.include_router(referrals.router, prefix="/api/v1/referrals", tags=["Referrals"])
+app.include_router(facilities.router, prefix="/api/v1/facilities", tags=["Facilities"])
+app.include_router(economics.router, prefix="/api/v1/economics", tags=["Economics"])
+app.include_router(waiting_centers.router, prefix="/api/v1/waiting-centers", tags=["Waiting Centers"])
+app.include_router(access_risk.router, prefix="/api/v1/access-risk", tags=["Access Risk"])
+app.include_router(patients.router, prefix="/api/v1/patients", tags=["Patients"])
+app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentication"])
 
 @app.get("/")
 async def root():
     return {
         "message": "MAMA-AI API",
         "version": "1.0.0",
-        "status": "operational"
+        "status": "operational",
+        "docs": "/docs"
     }
 
 @app.get("/health")

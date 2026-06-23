@@ -50,3 +50,38 @@ docker-compose.override.yml
 *.tfstate
 *.tfstate.*
 .terraform/
+Miniconda3-latest-Linux-x86_64.sh
+get-docker.sh
+get-docker.sh
+
+# Large files
+*.sh
+Miniconda3-*.sh
+get-docker.sh
+
+# Environment
+.env
+.env.local
+.env.*.local
+
+# Node modules
+node_modules/
+.next/
+out/
+
+# Python cache
+__pycache__/
+*.pyc
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
