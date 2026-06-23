@@ -4,36 +4,36 @@ services:
     runtime: python
     repo: https://github.com/ZziemWellu/mama-ai-platform
     plan: free
-    region: frankfurt
+    region: oregon
     buildCommand: |
+      pip install --upgrade pip
       pip install -r services/api-gateway/requirements.txt
-    startCommand: |
-      cd services/api-gateway && uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    startCommand: cd services/api-gateway && uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: DATABASE_URL
         fromDatabase:
           name: mama-ai-db
           property: connectionString
-      - key: SECRET_KEY
-        generateValue: true
-      - key: JWT_SECRET
-        generateValue: true
+      - key: PYTHON_VERSION
+        value: "3.10.0"
       - key: ENVIRONMENT
         value: production
-      - key: ALLOWED_ORIGINS
-        value: https://mama-ai.streamlit.app,https://mama-ai.vercel.app
+      - key: DEBUG
+        value: False
 
   - type: web
     name: mama-ai-dashboard
     runtime: python
     repo: https://github.com/ZziemWellu/mama-ai-platform
     plan: free
-    region: frankfurt
+    region: oregon
     buildCommand: |
-      cd apps/dashboard && pip install -r requirements.txt
-    startCommand: |
-      cd apps/dashboard && streamlit run app.py --server.port $PORT --server.address 0.0.0.0
+      pip install --upgrade pip
+      pip install -r apps/dashboard/requirements.txt
+    startCommand: cd apps/dashboard && streamlit run app.py --server.port $PORT --server.address 0.0.0.0
     envVars:
+      - key: PYTHON_VERSION
+        value: "3.10.0"
       - key: API_URL
         fromService:
           name: mama-ai-api
@@ -43,8 +43,9 @@ services:
 databases:
   - name: mama-ai-db
     plan: free
+    region: oregon
     databaseName: mama_ai
-    region: frankfurt
+    user: mama_ai_user
     ipAllowList:
       - source: 0.0.0.0/0
-        description: "Allow all connections"
+        description: Allow all connections

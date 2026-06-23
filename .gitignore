@@ -85,3 +85,8 @@ htmlcov/
 # OS
 .DS_Store
 Thumbs.db
+
+# Python version files
+.python-version
+*.pyc
+__pycache__/
