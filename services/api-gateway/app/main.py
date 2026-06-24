@@ -1,34 +1,25 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-import logging
 
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+from app.core.database import engine, Base
+from app.api import assessments, referrals, facilities, economics, waiting_centers, access_risk, patients, auth
 
-# Create FastAPI app
+# Create all tables on startup
+Base.metadata.create_all(bind=engine)
+
 app = FastAPI(
     title="MAMA-AI API",
     description="AI-Powered Maternal Emergency, Referral, and Safe Birth Ecosystem",
-    version="1.0.0",
-    docs_url="/docs",
-    redoc_url="/redoc"
+    version="1.0.0"
 )
 
-# CORS - Allow mobile apps
+# CORS
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
-)
-
-# Import routers
-from app.api import (
-    assessments, referrals, facilities, 
-    economics, waiting_centers, access_risk,
-    patients, auth
 )
 
 # Include routers
@@ -56,4 +47,4 @@ async def health_check():
 
 @app.get("/api/v1/ping")
 async def ping():
-    return {"message": "pong", "environment": "mama-ai"}
+    return {"message": "pong"}
