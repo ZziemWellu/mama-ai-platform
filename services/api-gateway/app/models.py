@@ -1,10 +1,10 @@
 from sqlalchemy import Column, String, Integer, Boolean, DateTime, Float, Text, JSON, ForeignKey
 from sqlalchemy.dialects.postgresql import UUID, ARRAY
 from sqlalchemy.sql import func
-from sqlalchemy.ext.declarative import declarative_base
 import uuid
 
-Base = declarative_base()
+# IMPORTANT: Use the SAME Base from database module
+from app.core.database import Base
 
 class User(Base):
     __tablename__ = "users"
