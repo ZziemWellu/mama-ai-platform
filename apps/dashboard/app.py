@@ -51,7 +51,7 @@ if role == "👩‍⚕️ Midwife":
             headache = st.slider("Headache Severity", 0, 10, 0)
             fever = st.checkbox("Fever")
 
-        if st.button("🚨 Assess Risk", width="stretch", type="primary"):
+        if st.button("🚨 Assess Risk", use_container_width=True, type="primary"):
             bleeding_vol = 0 if bleeding == "None" else 300 if bleeding == "<500mL" else 600 if bleeding == "500-1000mL" else 1000
             request = {
                 "patient_id": patient_id,
