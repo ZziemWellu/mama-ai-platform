@@ -51,7 +51,7 @@ if role == "👩‍⚕️ Midwife":
             headache = st.slider("Headache Severity", 0, 10, 0)
             fever = st.checkbox("Fever")
 
-        if st.button("🚨 Assess Risk", use_container_width=True, type="primary"):
+        if st.button("🚨 Assess Risk", width="stretch", type="primary"):
             bleeding_vol = 0 if bleeding == "None" else 300 if bleeding == "<500mL" else 600 if bleeding == "500-1000mL" else 1000
             request = {
                 "patient_id": patient_id,
@@ -106,7 +106,7 @@ elif role == "🏥 District Officer":
     data = pd.DataFrame({'Facility': ['Ejura', 'Nkwanta', 'Mampong'], 'Cost Savings': [28400, 12600, 6200]})
     fig = px.bar(data, x='Facility', y='Cost Savings', title='Cost Savings by Facility', color='Cost Savings', color_continuous_scale='Greens')
     fig.update_layout(height=300)
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
 # ============ PREGNANT WOMAN VIEW ============
 else:

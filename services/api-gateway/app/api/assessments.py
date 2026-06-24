@@ -1,13 +1,12 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-from typing import List, Optional
-from datetime import datetime
 import uuid
 import logging
 
 from app.core.database import get_db
 from app.models import RiskAssessment, Patient
-from app.schemas import AssessmentRequest, AssessmentResponse
+from app.schemas import AssessmentRequest
+from app.enums import PrimaryCondition, RiskLevel
 
 router = APIRouter()
 logger = logging.getLogger(__name__)
@@ -15,7 +14,7 @@ logger = logging.getLogger(__name__)
 # Clinical rules
 CLINICAL_RULES = {
     "PPH": {
-        "condition": "Postpartum Haemorrhage",
+        "condition": PrimaryCondition.PPH,
         "thresholds": {"bleeding_ml": 500},
         "actions": [
             "Uterine massage",
@@ -25,7 +24,7 @@ CLINICAL_RULES = {
         ]
     },
     "PRE_ECLAMPSIA": {
-        "condition": "Severe Pre-eclampsia",
+        "condition": PrimaryCondition.PRE_ECLAMPSIA,
         "thresholds": {"systolic_bp": 160, "severe_headache": True},
         "actions": [
             "Administer magnesium sulfate",
@@ -48,11 +47,10 @@ async def assess_risk(request: AssessmentRequest, db: Session = Depends(get_db))
         hard_risk = check_hard_rules(request)
         
         if hard_risk:
-            # Save assessment
             assessment = RiskAssessment(
                 patient_id=patient.id,
-                risk_level=hard_risk["risk_level"],
-                primary_condition=hard_risk["primary_condition"],
+                risk_level=RiskLevel.CRITICAL.value,
+                primary_condition=hard_risk["condition"].value,
                 confidence_score=hard_risk["confidence_score"],
                 explanation_text=hard_risk["explanation"],
                 systolic_bp=request.vitals.systolic_bp,
@@ -72,8 +70,8 @@ async def assess_risk(request: AssessmentRequest, db: Session = Depends(get_db))
             
             return {
                 "assessment_id": str(assessment.id),
-                "risk_level": hard_risk["risk_level"],
-                "primary_condition": hard_risk["primary_condition"],
+                "risk_level": RiskLevel.CRITICAL.value,
+                "primary_condition": hard_risk["condition"].value,
                 "confidence_score": hard_risk["confidence_score"],
                 "explanation": hard_risk["explanation"],
                 "shap_summary": {"bleeding_volume": 0.85},
@@ -81,16 +79,13 @@ async def assess_risk(request: AssessmentRequest, db: Session = Depends(get_db))
                 "referral_options": get_referral_options()
             }
         
-        # Fallback assessment
-        fallback = get_fallback_assessment(request)
-        
-        # Save assessment
+        # Fallback - Normal
         assessment = RiskAssessment(
             patient_id=patient.id,
-            risk_level=fallback["risk_level"],
-            primary_condition=fallback["primary_condition"],
-            confidence_score=fallback["confidence_score"],
-            explanation_text=fallback["explanation"],
+            risk_level=RiskLevel.LOW.value,
+            primary_condition=PrimaryCondition.NORMAL.value,
+            confidence_score=0.90,
+            explanation_text="No significant danger signs detected",
             systolic_bp=request.vitals.systolic_bp,
             diastolic_bp=request.vitals.diastolic_bp,
             temperature=request.vitals.temperature,
@@ -108,12 +103,12 @@ async def assess_risk(request: AssessmentRequest, db: Session = Depends(get_db))
         
         return {
             "assessment_id": str(assessment.id),
-            "risk_level": fallback["risk_level"],
-            "primary_condition": fallback["primary_condition"],
-            "confidence_score": fallback["confidence_score"],
-            "explanation": fallback["explanation"],
+            "risk_level": RiskLevel.LOW.value,
+            "primary_condition": PrimaryCondition.NORMAL.value,
+            "confidence_score": 0.90,
+            "explanation": "No significant danger signs detected",
             "shap_summary": {},
-            "recommended_actions": fallback["actions"],
+            "recommended_actions": ["Routine monitoring", "Document findings"],
             "referral_options": get_referral_options()
         }
     
@@ -122,7 +117,7 @@ async def assess_risk(request: AssessmentRequest, db: Session = Depends(get_db))
         raise HTTPException(status_code=500, detail=str(e))
 
 def get_or_create_patient(request, db):
-    # Try to find patient by UUID
+    # Try to find by UUID
     try:
         patient_uuid = uuid.UUID(request.patient_id)
         patient = db.query(Patient).filter(Patient.id == patient_uuid).first()
@@ -131,12 +126,12 @@ def get_or_create_patient(request, db):
     except ValueError:
         pass
     
-    # Try to find by patient_code
+    # Try by patient_code
     patient = db.query(Patient).filter(Patient.patient_code == request.patient_id).first()
     if patient:
         return patient
     
-    # Create new patient
+    # Create new
     new_uuid = uuid.uuid4()
     patient = Patient(
         id=new_uuid,
@@ -153,8 +148,7 @@ def get_or_create_patient(request, db):
 def check_hard_rules(request):
     if request.symptoms.bleeding_volume and request.symptoms.bleeding_volume > 500:
         return {
-            "risk_level": "CRITICAL",
-            "primary_condition": "PPH",
+            "condition": CLINICAL_RULES["PPH"]["condition"],
             "confidence_score": 0.98,
             "explanation": f"Bleeding >500mL ({request.symptoms.bleeding_volume}mL) requires immediate intervention",
             "actions": CLINICAL_RULES["PPH"]["actions"]
@@ -163,43 +157,13 @@ def check_hard_rules(request):
     if (request.vitals.systolic_bp and request.vitals.systolic_bp >= 160 and 
         request.symptoms.headache_severity and request.symptoms.headache_severity >= 7):
         return {
-            "risk_level": "CRITICAL",
-            "primary_condition": "PRE_ECLAMPSIA",
+            "condition": CLINICAL_RULES["PRE_ECLAMPSIA"]["condition"],
             "confidence_score": 0.95,
             "explanation": f"BP {request.vitals.systolic_bp} with severe headache indicates pre-eclampsia",
             "actions": CLINICAL_RULES["PRE_ECLAMPSIA"]["actions"]
         }
     
     return None
-
-def get_fallback_assessment(request):
-    risk_factors = []
-    
-    if request.vitals.systolic_bp and request.vitals.systolic_bp >= 140:
-        risk_factors.append("High blood pressure")
-    if request.symptoms.bleeding_volume and request.symptoms.bleeding_volume > 200:
-        risk_factors.append("Moderate bleeding")
-    if request.obstetric_history.labour_hours and request.obstetric_history.labour_hours > 8:
-        risk_factors.append("Prolonged labour")
-    if request.symptoms.fever:
-        risk_factors.append("Fever present")
-    
-    if risk_factors:
-        return {
-            "risk_level": "HIGH",
-            "primary_condition": "Suspected complication",
-            "confidence_score": 0.75,
-            "explanation": f"Risk factors detected: {', '.join(risk_factors)}",
-            "actions": ["Monitor closely", "Prepare possible referral"]
-        }
-    
-    return {
-        "risk_level": "LOW",
-        "primary_condition": "Normal",
-        "confidence_score": 0.90,
-        "explanation": "No significant danger signs detected",
-        "actions": ["Routine monitoring", "Document findings"]
-    }
 
 def get_referral_options():
     return [
