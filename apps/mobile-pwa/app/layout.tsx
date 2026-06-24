@@ -1,4 +1,4 @@
-import type { Metadata } from 'next'
+import type { Metadata, Viewport } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 
@@ -6,10 +6,15 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'MAMA-AI — Maternal Emergency Intelligence',
-  description: 'AI-powered maternal emergency support, referral intelligence, and safe birth coordination for rural Ghana.',
+  description: 'AI-powered maternal emergency support for rural Ghana.',
   manifest: '/manifest.json',
+}
+
+export const viewport: Viewport = {
   themeColor: '#006B3F',
-  viewport: 'width=device-width, initial-scale=1, maximum-scale=1',
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 1,
 }
 
 export default function RootLayout({
