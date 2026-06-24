@@ -1,11 +1,18 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+import logging
 
 from app.core.database import engine, Base
 from app.api import assessments, referrals, facilities, economics, waiting_centers, access_risk, patients, auth
 
-# Create all tables on startup
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Create tables on startup
+logger.info("Creating database tables...")
 Base.metadata.create_all(bind=engine)
+logger.info("Database tables created successfully!")
 
 app = FastAPI(
     title="MAMA-AI API",
@@ -48,3 +55,10 @@ async def health_check():
 @app.get("/api/v1/ping")
 async def ping():
     return {"message": "pong"}
+
+@app.get("/db-test")
+async def db_test():
+    from sqlalchemy import text
+    with engine.connect() as conn:
+        result = conn.execute(text("SELECT NOW()"))
+        return {"database": str(result.scalar())}
