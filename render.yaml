@@ -16,8 +16,6 @@ services:
         fromDatabase:
           name: mama-ai-db
           property: connectionString
-      - key: PYTHON_VERSION
-        value: "3.10.0"
       - key: ENVIRONMENT
         value: production
       - key: DEBUG
@@ -34,8 +32,6 @@ services:
       pip install -r apps/dashboard/requirements.txt
     startCommand: cd apps/dashboard && streamlit run app.py --server.port $PORT --server.address 0.0.0.0
     envVars:
-      - key: PYTHON_VERSION
-        value: "3.10.0"
       - key: API_URL
         fromService:
           name: mama-ai-api
