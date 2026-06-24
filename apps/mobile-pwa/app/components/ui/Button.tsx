@@ -13,7 +13,7 @@ const buttonVariants = cva(
         secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
         ghost: "hover:bg-accent hover:text-accent-foreground",
         link: "underline-offset-4 hover:underline text-primary",
-        ghana: "bg-gradient-to-r from-ghana-red via-ghana-yellow to-ghana-green text-white shadow-lg hover:shadow-xl",
+        ghana: "bg-gradient-to-r from-[#CE1126] via-[#FCD116] to-[#006B3F] text-white shadow-lg hover:shadow-xl",
       },
       size: {
         default: "h-12 px-6 py-3",
