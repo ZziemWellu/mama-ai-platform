@@ -4,15 +4,15 @@ services:
     runtime: python
     plan: free
     region: oregon
+    rootDir: services/api-gateway
     buildCommand: |
-      pip install --upgrade pip
-      pip install -r services/api-gateway/requirements.txt
+      python -m pip install --upgrade pip
+      pip install -r requirements.txt
     startCommand: |
-      cd services/api-gateway
       uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: PYTHON_VERSION
-        value: 3.10
+        value: 3.10.14
       - key: DATABASE_URL
         fromDatabase:
           name: mama-ai-db
@@ -27,15 +27,15 @@ services:
     runtime: python
     plan: free
     region: oregon
+    rootDir: apps/dashboard
     buildCommand: |
-      pip install --upgrade pip
-      pip install -r apps/dashboard/requirements.txt
+      python -m pip install --upgrade pip
+      pip install -r requirements.txt
     startCommand: |
-      cd apps/dashboard
       streamlit run app.py --server.port $PORT --server.address 0.0.0.0
     envVars:
       - key: PYTHON_VERSION
-        value: 3.10
+        value: 3.10.14
       - key: API_URL
         fromService:
           name: mama-ai-api
