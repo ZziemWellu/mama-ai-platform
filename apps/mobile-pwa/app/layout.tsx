@@ -6,7 +6,7 @@ const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
   title: 'MAMA-AI — Maternal Emergency Intelligence',
-  description: 'AI-powered maternal emergency support for rural Ghana.',
+  description: 'AI-powered maternal emergency support, referral intelligence, and safe birth coordination for rural Ghana.',
   manifest: '/manifest.json',
 }
 
