@@ -26,6 +26,7 @@ import {
 } from "lucide-react";
 import Navbar from "./components/navigation/Navbar";
 import EmergencyButton from "./components/EmergencyButton";
+import FloatingEmergencyButton from "./components/layout/FloatingEmergencyButton";
 import ThreeDelaysDashboard from "./components/ThreeDelaysDashboard";
 import EnhancedEconomics from "./components/EnhancedEconomics";
 import WaitingHomeRecommendation from "./components/WaitingHomeRecommendation";
@@ -35,12 +36,17 @@ import CommunityHealthWorkerMode from "./components/features/CommunityHealthWork
 import VoiceAssistant from "./components/features/VoiceAssistant";
 import LiveNationalDashboard from "./components/features/LiveNationalDashboard";
 import OfflineSyncIndicator from "./components/OfflineSyncIndicator";
+import GuidedDemo from "./components/features/demo/GuidedDemo";
+import ExplainableAIVisual from "./components/features/visualizations/ExplainableAIVisual";
+import HealthEconomicsVisual from "./components/features/visualizations/HealthEconomicsVisual";
+import ThreeDelaysVisual from "./components/features/visualizations/ThreeDelaysVisual";
+import GhanaMap from "./components/features/map/GhanaMap";
 
 export default function HomePage() {
   const [isOnline, setIsOnline] = useState(true);
   const [mounted, setMounted] = useState(false);
-  const [activeTab, setActiveTab] = useState("overview");
   const [showDemo, setShowDemo] = useState(false);
+  const [activeTab, setActiveTab] = useState("overview");
 
   useEffect(() => {
     setMounted(true);
@@ -151,6 +157,38 @@ export default function HomePage() {
           </div>
         </section>
 
+        {/* Journey of a Mother Story */}
+        <section className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+          <div className="flex items-center gap-2 mb-3">
+            <Heart className="w-5 h-5 text-red-500" />
+            <h2 className="text-xl font-bold text-gray-800">Journey of a Mother</h2>
+          </div>
+          <div className="prose prose-sm max-w-none text-gray-600">
+            <p className="text-sm leading-relaxed">
+              <span className="font-semibold text-gray-800">Ama</span>, a 39-week pregnant woman in a rural village, 
+              reports severe bleeding. <span className="font-semibold text-teal-600">MAMA-AI</span> instantly identifies 
+              a critical postpartum haemorrhage risk with high confidence. The platform explains the key factors using 
+              <span className="font-semibold text-purple-600"> Explainable AI</span>. 
+              <span className="font-semibold text-red-600"> Emergency Mode</span> activates with evidence-based actions. 
+              The system recommends the nearest referral facility with C-section and blood bank capabilities. 
+              If travel barriers exist, <span className="font-semibold text-purple-600">Waiting Home</span> recommendations 
+              are generated proactively. The referral is tracked through the 
+              <span className="font-semibold text-pink-600"> Maternal Timeline</span>, while 
+              <span className="font-semibold text-green-600"> CHWs</span> receive updates. The case contributes to the 
+              <span className="font-semibold text-cyan-600"> National Dashboard</span>, 
+              <span className="font-semibold text-orange-600"> Three Delays</span> Analysis, and 
+              <span className="font-semibold text-indigo-600"> Health Economics</span> Dashboard.
+            </p>
+          </div>
+        </section>
+
+        {/* Guided Demo */}
+        {showDemo && (
+          <section>
+            <GuidedDemo onClose={() => setShowDemo(false)} />
+          </section>
+        )}
+
         {/* Live Impact Stats */}
         <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 text-center">
@@ -174,37 +212,6 @@ export default function HomePage() {
             <p className="text-xs text-gray-400">Lives improved</p>
           </div>
         </section>
-
-        {/* Guided Demo Section */}
-        {showDemo && (
-          <section className="bg-gradient-to-r from-amber-50 to-amber-100 rounded-3xl p-6 border-2 border-amber-300">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-xl font-bold text-amber-800 flex items-center gap-2">
-                <Sparkles className="w-5 h-5" />
-                Guided Demo — Experience MAMA-AI
-              </h2>
-              <button 
-                onClick={() => setShowDemo(false)}
-                className="text-sm text-amber-600 hover:text-amber-800"
-              >
-                ✕ Close
-              </button>
-            </div>
-            <p className="text-amber-700 mb-4">
-              Click any case below to see how MAMA-AI handles different obstetric emergencies.
-            </p>
-            <div className="flex flex-wrap gap-2">
-              {sampleCases.map((caseItem) => (
-                <Link key={caseItem.id} href={`/assessment?demo=${caseItem.id}`}>
-                  <button className="bg-white px-4 py-2 rounded-xl shadow-sm hover:shadow-md transition border border-amber-200 flex items-center gap-2">
-                    <span>{caseItem.icon}</span>
-                    <span className="text-sm font-medium">{caseItem.label}</span>
-                  </button>
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
 
         {/* Core Capabilities */}
         <section>
@@ -248,6 +255,17 @@ export default function HomePage() {
               📊 Analytics
             </button>
           </Link>
+        </div>
+
+        {/* Visualizations Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <ExplainableAIVisual />
+          <HealthEconomicsVisual />
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <ThreeDelaysVisual />
+          <GhanaMap />
         </div>
 
         {/* Clinical Workflow */}
@@ -306,8 +324,69 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Research Validation */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+        {/* Tabs Navigation */}
+        <div className="flex flex-wrap gap-2 border-b border-gray-200 pb-2">
+          {tabs.map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                activeTab === tab.id
+                  ? "bg-teal-600 text-white"
+                  : "text-gray-500 hover:bg-gray-100"
+              }`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+
+        {/* Tab Content */}
+        <div className="mt-6">
+          {activeTab === "overview" && (
+            <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">📊 Platform Overview</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <h4 className="font-medium text-gray-700">What We Do</h4>
+                  <ul className="mt-2 space-y-2 text-sm text-gray-600">
+                    <li className="flex items-center gap-2">✅ AI-powered emergency risk detection</li>
+                    <li className="flex items-center gap-2">✅ Explainable predictions with SHAP</li>
+                    <li className="flex items-center gap-2">✅ Referral optimization with facility mapping</li>
+                    <li className="flex items-center gap-2">✅ Health economics & cost savings</li>
+                    <li className="flex items-center gap-2">✅ Safe birth center recommendations</li>
+                    <li className="flex items-center gap-2">✅ Offline-first design for rural areas</li>
+                    <li className="flex items-center gap-2">✅ Community health worker support</li>
+                    <li className="flex items-center gap-2">✅ Voice-activated emergency assessment</li>
+                  </ul>
+                </div>
+                <div>
+                  <h4 className="font-medium text-gray-700">Evidence Base</h4>
+                  <ul className="mt-2 space-y-2 text-sm text-gray-600">
+                    <li className="flex items-center gap-2">📄 Peer-reviewed CS-TC Framework</li>
+                    <li className="flex items-center gap-2">📊 Validated health economics model</li>
+                    <li className="flex items-center gap-2">🔬 Explainable AI with clinical reasoning</li>
+                    <li className="flex items-center gap-2">🏥 Ghana Health Service protocols</li>
+                    <li className="flex items-center gap-2">🌍 WHO IMPAC guidelines aligned</li>
+                    <li className="flex items-center gap-2">🎯 SDG 3, 5, 9, 10 contributions</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === "delays" && <ThreeDelaysDashboard />}
+          {activeTab === "economics" && <EnhancedEconomics />}
+          {activeTab === "waiting" && <WaitingHomeRecommendation />}
+          {activeTab === "facilities" && <FacilityMap />}
+          {activeTab === "timeline" && <MaternalTimeline />}
+          {activeTab === "chw" && <CommunityHealthWorkerMode />}
+          {activeTab === "voice" && <VoiceAssistant />}
+          {activeTab === "national" && <LiveNationalDashboard />}
+        </div>
+
+        {/* Research Validation Footer */}
+        <div className="bg-gradient-to-r from-teal-50 to-emerald-50 rounded-2xl p-6 border border-teal-100">
           <div className="flex items-center gap-2 mb-3">
             <Award className="w-5 h-5 text-teal-600" />
             <h3 className="font-semibold text-gray-800">Research-Backed Innovation</h3>
@@ -335,9 +414,11 @@ export default function HomePage() {
             </span>
           </div>
         </div>
+      </main>
 
-        {/* Footer */}
-        <footer className="border-t border-gray-200 pt-6">
+      {/* Footer */}
+      <footer className="mt-12 border-t border-gray-200 bg-white">
+        <div className="max-w-7xl mx-auto px-4 py-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-gray-500">
             <div className="flex items-center gap-4">
               <span className="font-medium text-gray-700">MAMA-AI v2.0</span>
@@ -363,8 +444,11 @@ export default function HomePage() {
               </span>
             </div>
           </div>
-        </footer>
-      </main>
+        </div>
+      </footer>
+
+      {/* Floating Emergency Button */}
+      <FloatingEmergencyButton />
     </div>
   );
 }
