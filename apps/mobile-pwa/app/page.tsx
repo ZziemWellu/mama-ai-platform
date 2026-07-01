@@ -2,15 +2,14 @@
 
 import { useState, useEffect } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import {
-  Home,
-  AlertTriangle,
-  Building2,
-  Activity,
   Heart,
-  Shield,
+  AlertTriangle,
+  Activity,
+  Building2,
   MapPin,
-  ChevronRight,
+  Shield,
   Globe,
   CheckCircle,
   TrendingUp,
@@ -22,6 +21,12 @@ import {
   Sparkles,
   Calendar,
   Mic,
+  Wifi,
+  WifiOff,
+  Cloud,
+  BarChart3,
+  Stethoscope,
+  Baby,
 } from "lucide-react";
 import EmergencyButton from "./components/EmergencyButton";
 import ThreeDelaysDashboard from "./components/ThreeDelaysDashboard";
@@ -35,10 +40,11 @@ import LiveNationalDashboard from "./components/features/LiveNationalDashboard";
 import OfflineSyncIndicator from "./components/OfflineSyncIndicator";
 
 export default function HomePage() {
+  const router = useRouter();
   const [isOnline, setIsOnline] = useState(true);
   const [mounted, setMounted] = useState(false);
   const [activeTab, setActiveTab] = useState("overview");
-  const [userRole, setUserRole] = useState<"midwife" | "chw" | "dho">("midwife");
+  const [showDemo, setShowDemo] = useState(false);
 
   useEffect(() => {
     setMounted(true);
@@ -54,6 +60,41 @@ export default function HomePage() {
 
   if (!mounted) return null;
 
+  // Use only icons that exist in lucide-react
+  const features = [
+    { icon: AlertTriangle, title: "Emergency Assessment", desc: "AI-powered risk detection", color: "from-red-500 to-red-600", href: "/assessment" },
+    { icon: AlertTriangle, title: "Emergency Mode", desc: "One-tap emergency response", color: "from-orange-500 to-orange-600", href: "/assessment?emergency=true" },
+    { icon: MapPin, title: "Facility Map", desc: "Find nearest facilities with capabilities", color: "from-blue-500 to-blue-600", href: "/facilities" },
+    { icon: Building2, title: "Waiting Homes", desc: "Safe birth center recommendations", color: "from-purple-500 to-purple-600", href: "/waiting-home" },
+    { icon: Mic, title: "Voice Assistant", desc: "Hands-free assessment in English & Twi", color: "from-teal-500 to-teal-600", href: "/assessment" },
+    { icon: Wifi, title: "Offline Sync", desc: "Works without internet, syncs later", color: "from-amber-500 to-amber-600", href: "/" },
+    { icon: Users, title: "CHW Mode", desc: "Community health worker workflows", color: "from-green-500 to-green-600", href: "/" },
+    { icon: Calendar, title: "Maternal Timeline", desc: "Track pregnancy journey", color: "from-pink-500 to-pink-600", href: "/" },
+    { icon: Clock, title: "Three Delays", desc: "Identify and address care delays", color: "from-orange-500 to-orange-600", href: "/" },
+    { icon: BarChart3, title: "Health Economics", desc: "Cost savings and DALY impact", color: "from-indigo-500 to-indigo-600", href: "/dashboard" },
+    { icon: Globe, title: "National Dashboard", desc: "Population health intelligence", color: "from-cyan-500 to-cyan-600", href: "/" },
+    { icon: Activity, title: "Explainable AI", desc: "Understand why every prediction is made", color: "from-purple-500 to-purple-600", href: "/assessment" },
+  ];
+
+  const sampleCases = [
+    { id: "pph", label: "Postpartum Haemorrhage", icon: "🩸" },
+    { id: "preeclampsia", label: "Severe Preeclampsia", icon: "⚠️" },
+    { id: "eclampsia", label: "Eclampsia", icon: "⚡" },
+    { id: "obstructed", label: "Obstructed Labour", icon: "🔒" },
+    { id: "sepsis", label: "Sepsis", icon: "🦠" },
+  ];
+
+  const innovations = [
+    { title: "Explainable AI", desc: "SHAP-based predictions with visual explanations", benefit: "Builds clinician trust" },
+    { title: "Three Delays Framework", desc: "Identifies decision, transport, and facility delays", benefit: "System-level insights" },
+    { title: "Health Economics", desc: "Real-time cost savings and DALY calculation", benefit: "Evidence-based investment" },
+    { title: "Offline-First", desc: "Works without internet, syncs when connected", benefit: "Rural Ghana ready" },
+    { title: "CHW Mode", desc: "Community health worker workflows", benefit: "Extends reach" },
+    { title: "Voice Interface", desc: "Hands-free assessment in local languages", benefit: "Low-literacy friendly" },
+    { title: "Waiting Homes", desc: "AI-powered safe birth recommendations", benefit: "Prevents home deliveries" },
+    { title: "Facility Intelligence", desc: "Real-time facility capabilities", benefit: "Informed referrals" },
+  ];
+
   const tabs = [
     { id: "overview", label: "📊 Overview" },
     { id: "delays", label: "🕒 Three Delays" },
@@ -61,7 +102,7 @@ export default function HomePage() {
     { id: "waiting", label: "🏠 Waiting Homes" },
     { id: "facilities", label: "🗺️ Facilities" },
     { id: "timeline", label: "📅 Timeline" },
-    { id: "chw", label: "👩‍⚕️ CHW Mode" },
+    { id: "chw", label: "👩‍⚕️ CHW" },
     { id: "voice", label: "🎤 Voice" },
     { id: "national", label: "📊 National" },
   ];
@@ -98,48 +139,202 @@ export default function HomePage() {
 
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-8">
-        {/* Hero Tagline */}
-        <div className="text-center">
-          <h2 className="text-2xl md:text-3xl font-bold text-gray-800">
-            <span className="bg-gradient-to-r from-teal-600 via-amber-500 to-red-600 bg-clip-text text-transparent">
-              Saving Mothers Through Predictive Care
+        {/* Hero Section */}
+        <section className="bg-gradient-to-r from-teal-950 via-teal-800 to-emerald-700 text-white rounded-3xl p-8 md:p-12 shadow-2xl relative overflow-hidden">
+          <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/3" />
+          <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/3" />
+          <div className="relative z-10 max-w-3xl">
+            <span className="inline-block px-4 py-1.5 rounded-full text-sm font-medium bg-white/20 backdrop-blur-sm mb-4">
+              🏆 Ghana AI Innovation Challenge 2026
             </span>
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
+              <span className="text-emerald-300">No mother should die</span>
+              <br />
+              because help is too far away.
+            </h1>
+            <p className="mt-4 text-lg md:text-xl text-teal-100 max-w-2xl">
+              AI-powered maternal emergency intelligence for rural Ghana.
+              Predict, explain, respond, refer, and monitor — all in one platform.
+            </p>
+            <div className="mt-6 flex flex-wrap gap-3">
+              <Link href="/assessment">
+                <button className="px-6 md:px-8 py-3 md:py-4 rounded-xl bg-emerald-400 hover:bg-emerald-300 text-black font-semibold shadow-lg hover:shadow-xl transition-all duration-200 flex items-center gap-2">
+                  <AlertTriangle className="w-5 h-5" />
+                  Start Emergency Assessment
+                </button>
+              </Link>
+              <button 
+                onClick={() => setShowDemo(!showDemo)}
+                className="px-6 md:px-8 py-3 md:py-4 rounded-xl border border-white/50 hover:bg-white/10 text-white font-semibold transition-all duration-200 flex items-center gap-2"
+              >
+                <Sparkles className="w-5 h-5" />
+                {showDemo ? "Hide Demo" : "Start Guided Demo"}
+              </button>
+            </div>
+
+            {/* Status Indicators */}
+            <div className="mt-6 flex flex-wrap gap-4 text-sm">
+              <span className="flex items-center gap-1 bg-white/10 px-3 py-1 rounded-full">
+                <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
+                API Connected
+              </span>
+              <span className="flex items-center gap-1 bg-white/10 px-3 py-1 rounded-full">
+                <span className="w-2 h-2 rounded-full bg-emerald-400" />
+                Offline Ready
+              </span>
+              <span className="flex items-center gap-1 bg-white/10 px-3 py-1 rounded-full">
+                <span className="w-2 h-2 rounded-full bg-purple-400" />
+                AI Active
+              </span>
+              <span className="flex items-center gap-1 bg-white/10 px-3 py-1 rounded-full">
+                <span className="w-2 h-2 rounded-full bg-blue-400" />
+                Voice Enabled
+              </span>
+              <span className="flex items-center gap-1 bg-white/10 px-3 py-1 rounded-full">
+                <span className="w-2 h-2 rounded-full bg-yellow-400" />
+                GPS Ready
+              </span>
+            </div>
+          </div>
+        </section>
+
+        {/* Live Impact Stats */}
+        <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 text-center">
+            <p className="text-3xl font-bold text-red-600">24</p>
+            <p className="text-sm text-gray-500">High-Risk Mothers</p>
+            <p className="text-xs text-gray-400">Detected this month</p>
+          </div>
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 text-center">
+            <p className="text-3xl font-bold text-blue-600">18</p>
+            <p className="text-sm text-gray-500">Emergency Referrals</p>
+            <p className="text-xs text-gray-400">Successfully completed</p>
+          </div>
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 text-center">
+            <p className="text-3xl font-bold text-green-600">GHS 47.2k</p>
+            <p className="text-sm text-gray-500">Cost Savings</p>
+            <p className="text-xs text-gray-400">From early intervention</p>
+          </div>
+          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 text-center">
+            <p className="text-3xl font-bold text-purple-600">187</p>
+            <p className="text-sm text-gray-500">DALYs Averted</p>
+            <p className="text-xs text-gray-400">Lives improved</p>
+          </div>
+        </section>
+
+        {/* Guided Demo Section */}
+        {showDemo && (
+          <section className="bg-gradient-to-r from-amber-50 to-amber-100 rounded-3xl p-6 border-2 border-amber-300">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-bold text-amber-800 flex items-center gap-2">
+                <Sparkles className="w-5 h-5" />
+                Guided Demo — Experience MAMA-AI
+              </h2>
+              <button 
+                onClick={() => setShowDemo(false)}
+                className="text-sm text-amber-600 hover:text-amber-800"
+              >
+                ✕ Close
+              </button>
+            </div>
+            <p className="text-amber-700 mb-4">
+              Click any case below to see how MAMA-AI handles different obstetric emergencies.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {sampleCases.map((caseItem) => (
+                <button
+                  key={caseItem.id}
+                  onClick={() => {
+                    router.push(`/assessment?demo=${caseItem.id}`)
+                  }}
+                  className="bg-white px-4 py-2 rounded-xl shadow-sm hover:shadow-md transition border border-amber-200 flex items-center gap-2"
+                >
+                  <span>{caseItem.icon}</span>
+                  <span className="text-sm font-medium">{caseItem.label}</span>
+                </button>
+              ))}
+            </div>
+          </section>
+        )}
+
+        {/* Core Innovations Grid */}
+        <section>
+          <h2 className="text-2xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <Sparkles className="w-6 h-6 text-teal-600" />
+            Core Innovations
           </h2>
-          <p className="text-sm text-gray-500 mt-1">
-            AI-powered maternal emergency intelligence for rural Ghana
-          </p>
-        </div>
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+            {features.map((feature, index) => {
+              const Icon = feature.icon
+              return (
+                <Link key={index} href={feature.href}>
+                  <div className={`bg-gradient-to-br ${feature.color} text-white p-4 rounded-2xl shadow-md hover:shadow-xl transition-all hover:-translate-y-1 cursor-pointer h-full`}>
+                    <Icon className="w-6 h-6 mb-2" />
+                    <p className="font-semibold text-sm">{feature.title}</p>
+                    <p className="text-xs opacity-80 mt-1">{feature.desc}</p>
+                  </div>
+                </Link>
+              )
+            })}
+          </div>
+        </section>
+
+        {/* Clinical Workflow */}
+        <section className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+          <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <Stethoscope className="w-5 h-5 text-teal-600" />
+            Clinical Workflow
+          </h2>
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            {[
+              "Patient",
+              "↓ Assessment",
+              "↓ AI Prediction",
+              "↓ Explainable AI",
+              "↓ Emergency Actions",
+              "↓ Referral",
+              "↓ Waiting Home",
+              "↓ Follow-up",
+              "↓ Population Analytics"
+            ].map((step, index) => (
+              <span key={index} className={`px-3 py-1 rounded-full ${index % 2 === 0 ? 'bg-teal-100 text-teal-700' : 'bg-gray-100 text-gray-600'}`}>
+                {step}
+              </span>
+            ))}
+          </div>
+        </section>
+
+        {/* Innovation Showcase */}
+        <section className="bg-gradient-to-r from-teal-50 to-emerald-50 rounded-2xl p-6 border border-teal-200">
+          <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
+            <Award className="w-5 h-5 text-teal-600" />
+            Why MAMA-AI is Different
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {innovations.map((item, index) => (
+              <div key={index} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
+                <div className="flex items-start gap-2">
+                  <CheckCircle className="w-5 h-5 text-teal-600 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="font-semibold text-gray-800">{item.title}</p>
+                    <p className="text-xs text-gray-500">{item.desc}</p>
+                    <p className="text-xs text-teal-600 mt-1">→ {item.benefit}</p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
 
         {/* Role Switcher */}
         <div className="flex flex-wrap gap-2 justify-center">
-          <button
-            onClick={() => setUserRole("midwife")}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-              userRole === "midwife"
-                ? "bg-teal-600 text-white"
-                : "bg-gray-200 text-gray-600 hover:bg-gray-300"
-            }`}
-          >
+          <button className="px-4 py-2 rounded-lg text-sm font-medium bg-teal-600 text-white">
             👩‍⚕️ Midwife
           </button>
-          <button
-            onClick={() => setUserRole("chw")}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-              userRole === "chw"
-                ? "bg-teal-600 text-white"
-                : "bg-gray-200 text-gray-600 hover:bg-gray-300"
-            }`}
-          >
+          <button className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-200 text-gray-600 hover:bg-gray-300">
             👩‍🌾 CHW
           </button>
-          <button
-            onClick={() => setUserRole("dho")}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
-              userRole === "dho"
-                ? "bg-teal-600 text-white"
-                : "bg-gray-200 text-gray-600 hover:bg-gray-300"
-            }`}
-          >
+          <button className="px-4 py-2 rounded-lg text-sm font-medium bg-gray-200 text-gray-600 hover:bg-gray-300">
             📊 DHO
           </button>
         </div>
@@ -165,45 +360,6 @@ export default function HomePage() {
             <p className="text-xs text-gray-500">Facilities Online</p>
             <p className="text-2xl font-bold text-green-600">146</p>
           </div>
-        </div>
-
-        {/* Feature Cards */}
-        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-          <Link href="/assessment">
-            <div className="bg-gradient-to-br from-red-500 to-red-600 text-white p-4 rounded-xl shadow-md hover:shadow-lg transition-all hover:-translate-y-1 cursor-pointer">
-              <AlertTriangle className="w-6 h-6 mb-1" />
-              <p className="font-semibold text-sm">Emergency</p>
-              <p className="text-xs opacity-80">AI-powered risk detection</p>
-            </div>
-          </Link>
-          <Link href="/dashboard">
-            <div className="bg-gradient-to-br from-teal-500 to-teal-600 text-white p-4 rounded-xl shadow-md hover:shadow-lg transition-all hover:-translate-y-1 cursor-pointer">
-              <Activity className="w-6 h-6 mb-1" />
-              <p className="font-semibold text-sm">Dashboard</p>
-              <p className="text-xs opacity-80">Health economics</p>
-            </div>
-          </Link>
-          <Link href="/facilities">
-            <div className="bg-gradient-to-br from-blue-500 to-blue-600 text-white p-4 rounded-xl shadow-md hover:shadow-lg transition-all hover:-translate-y-1 cursor-pointer">
-              <Building2 className="w-6 h-6 mb-1" />
-              <p className="font-semibold text-sm">Facilities</p>
-              <p className="text-xs opacity-80">Referral intelligence</p>
-            </div>
-          </Link>
-          <Link href="/waiting-home">
-            <div className="bg-gradient-to-br from-purple-500 to-purple-600 text-white p-4 rounded-xl shadow-md hover:shadow-lg transition-all hover:-translate-y-1 cursor-pointer">
-              <MapPin className="w-6 h-6 mb-1" />
-              <p className="font-semibold text-sm">Waiting Homes</p>
-              <p className="text-xs opacity-80">Safe birth centers</p>
-            </div>
-          </Link>
-          <Link href="/assessment?emergency=true">
-            <div className="bg-gradient-to-br from-orange-500 to-orange-600 text-white p-4 rounded-xl shadow-md hover:shadow-lg transition-all hover:-translate-y-1 cursor-pointer animate-pulse">
-              <AlertTriangle className="w-6 h-6 mb-1" />
-              <p className="font-semibold text-sm">🚨 Emergency</p>
-              <p className="text-xs opacity-80">One-tap assessment</p>
-            </div>
-          </Link>
         </div>
 
         {/* Tabs Navigation */}
