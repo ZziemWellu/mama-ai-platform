@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { MapPin, Phone, BedDouble, Shield, AlertTriangle, Clock, Car } from 'lucide-react'
+import { MapPin, Phone, BedDouble, Shield, AlertTriangle, Clock, Car, CheckCircle, XCircle, Info } from 'lucide-react'
 
 interface WaitingHome {
   id: string
@@ -23,6 +23,7 @@ interface Recommendation {
   rationale: string
   waiting_homes: WaitingHome[]
   recommended_arrival: string
+  risk_factors: string[]
 }
 
 export default function WaitingHomeRecommendation() {
@@ -36,7 +37,10 @@ export default function WaitingHomeRecommendation() {
     distance_to_facility_km: 25,
     has_transport: false,
     previous_complications: true,
-    road_conditions: 'poor'
+    road_conditions: 'poor',
+    is_rainy_season: true,
+    has_previous_hemorrhage: false,
+    is_first_pregnancy: true
   })
 
   const handleRecommend = async () => {
@@ -83,10 +87,11 @@ export default function WaitingHomeRecommendation() {
             has_ambulance: true
           }
         ],
-        recommended_arrival: 'Within 48 hours'
+        recommended_arrival: 'Within 48 hours',
+        risk_factors: generateRiskFactors(formData)
       })
     } catch (error) {
-      // Mock result
+      // Enhanced mock result with rationale
       setResult({
         risk_level: 'HIGH',
         risk_score: 78,
@@ -118,31 +123,46 @@ export default function WaitingHomeRecommendation() {
             has_ambulance: true
           }
         ],
-        recommended_arrival: 'Within 48 hours'
+        recommended_arrival: 'Within 48 hours',
+        risk_factors: generateRiskFactors(formData)
       })
     } finally {
       setLoading(false)
     }
   }
 
-  const generateRationale = (data: typeof formData): string => {
-    const reasons = []
+  const generateRiskFactors = (data: typeof formData): string[] => {
+    const factors = []
     if (data.distance_to_facility_km > 20) {
-      reasons.push(`Lives ${data.distance_to_facility_km} km away from facility`)
+      factors.push(`Lives ${data.distance_to_facility_km} km away from nearest facility`)
     }
     if (!data.has_transport) {
-      reasons.push('No personal transport available')
+      factors.push('No personal transport available')
     }
     if (data.previous_complications) {
-      reasons.push('History of previous pregnancy complications')
+      factors.push('History of previous pregnancy complications')
     }
     if (data.road_conditions === 'poor' || data.road_conditions === 'flooded') {
-      reasons.push(`Poor road conditions (${data.road_conditions})`)
+      factors.push(`Poor road conditions (${data.road_conditions})`)
     }
     if (data.gestation_weeks >= 37) {
-      reasons.push(`Term pregnancy at ${data.gestation_weeks} weeks`)
+      factors.push(`Term pregnancy at ${data.gestation_weeks} weeks`)
     }
-    return reasons.length > 0 ? reasons.join('; ') : 'Multiple risk factors identified'
+    if (data.is_rainy_season) {
+      factors.push('Rainy season - roads may become impassable')
+    }
+    if (data.is_first_pregnancy) {
+      factors.push('First pregnancy - higher risk of complications')
+    }
+    if (data.has_previous_hemorrhage) {
+      factors.push('Previous hemorrhage - high risk of recurrence')
+    }
+    return factors
+  }
+
+  const generateRationale = (data: typeof formData): string => {
+    const factors = generateRiskFactors(data)
+    return factors.length > 0 ? factors.join('; ') : 'Multiple risk factors identified'
   }
 
   const getRiskColor = (level: string) => {
@@ -157,8 +177,11 @@ export default function WaitingHomeRecommendation() {
   return (
     <div className="space-y-6">
       {/* Input Form */}
-      <div className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-        <h3 className="font-semibold text-gray-700 mb-3">Patient Information</h3>
+      <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+        <h3 className="font-semibold text-gray-700 mb-4 flex items-center gap-2">
+          <Info className="w-5 h-5 text-teal-600" />
+          Patient Information
+        </h3>
         <div className="grid grid-cols-2 gap-3">
           <div>
             <label className="text-xs text-gray-500 font-medium">Patient ID</label>
@@ -188,7 +211,7 @@ export default function WaitingHomeRecommendation() {
             className="w-full border rounded-xl p-2 text-sm mt-1 focus:ring-2 focus:ring-teal-500 outline-none"
           />
         </div>
-        <div className="mt-3 grid grid-cols-2 gap-3">
+        <div className="mt-3 grid grid-cols-2 gap-2">
           <label className="flex items-center gap-2 text-sm">
             <input
               type="checkbox"
@@ -207,6 +230,24 @@ export default function WaitingHomeRecommendation() {
             />
             Previous Complications
           </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={formData.is_rainy_season}
+              onChange={(e) => setFormData({ ...formData, is_rainy_season: e.target.checked })}
+              className="rounded"
+            />
+            Rainy Season
+          </label>
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={formData.is_first_pregnancy}
+              onChange={(e) => setFormData({ ...formData, is_first_pregnancy: e.target.checked })}
+              className="rounded"
+            />
+            First Pregnancy
+          </label>
         </div>
         <button
           onClick={handleRecommend}
@@ -219,54 +260,70 @@ export default function WaitingHomeRecommendation() {
 
       {/* Results */}
       {result && (
-        <div className={`${getRiskColor(result.risk_level)} text-white rounded-2xl p-4`}>
-          <div className="flex justify-between">
+        <div className={`${getRiskColor(result.risk_level)} text-white rounded-2xl p-6`}>
+          <div className="flex justify-between items-start">
             <div>
-              <p className="text-sm opacity-80">Access Risk</p>
-              <p className="text-2xl font-bold">{result.risk_level}</p>
+              <p className="text-sm opacity-80">Access Risk Level</p>
+              <p className="text-3xl font-bold">{result.risk_level}</p>
             </div>
             <div className="text-right">
               <p className="text-sm opacity-80">Risk Score</p>
-              <p className="text-lg font-bold">{result.risk_score}/100</p>
+              <p className="text-2xl font-bold">{result.risk_score}/100</p>
             </div>
           </div>
 
-          <div className="mt-3 bg-white/20 rounded-xl p-3">
+          <div className="mt-4 bg-white/20 rounded-xl p-4">
             <p className="font-semibold text-sm">Recommendation</p>
-            <p className="text-sm">{result.recommendation}</p>
-            <p className="text-xs opacity-80 mt-1">⏱ Recommended arrival: {result.recommended_arrival}</p>
+            <p className="text-lg">{result.recommendation}</p>
+            <p className="text-sm opacity-80 mt-1">⏱ Recommended arrival: {result.recommended_arrival}</p>
           </div>
 
-          <div className="mt-3 bg-white/20 rounded-xl p-3">
-            <p className="font-semibold text-sm">Why?</p>
-            <p className="text-sm">{result.rationale}</p>
+          {/* Risk Factors - WHY */}
+          <div className="mt-4 bg-white/20 rounded-xl p-4">
+            <p className="font-semibold text-sm flex items-center gap-2">
+              <Info className="w-4 h-4" />
+              Why is this recommended?
+            </p>
+            <ul className="mt-2 space-y-1.5">
+              {result.risk_factors.map((factor, index) => (
+                <li key={index} className="flex items-start gap-2 text-sm">
+                  <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <span>{factor}</span>
+                </li>
+              ))}
+            </ul>
           </div>
 
+          {/* Waiting Homes */}
           {result.waiting_homes && result.waiting_homes.length > 0 && (
             <div className="mt-4">
-              <p className="font-semibold text-sm mb-2">🏠 Recommended Waiting Homes</p>
-              <div className="space-y-2">
+              <p className="font-semibold text-sm mb-3">🏠 Recommended Waiting Homes</p>
+              <div className="space-y-3">
                 {result.waiting_homes.map((home, i) => (
-                  <div key={i} className="bg-white/20 rounded-xl p-3">
+                  <div key={i} className="bg-white/20 rounded-xl p-4">
                     <div className="flex justify-between items-start">
                       <div>
-                        <p className="font-medium">{home.name}</p>
-                        <div className="flex gap-2 text-sm opacity-80">
-                          <span>📍 {home.distance_km} km</span>
-                          <span>⏱ {home.estimated_travel_time_minutes} min</span>
-                        </div>
+                        <p className="font-medium text-lg">{home.name}</p>
+                        <p className="text-sm opacity-80">{home.district}</p>
                       </div>
-                      <span className="text-xs bg-green-500 px-2 py-0.5 rounded-full">
+                      <span className="text-sm bg-green-500 px-3 py-1 rounded-full">
                         {home.available_beds} beds
                       </span>
+                    </div>
+                    <div className="flex gap-4 mt-2 text-sm opacity-80">
+                      <span>📍 {home.distance_km} km</span>
+                      <span>⏱ {home.estimated_travel_time_minutes} min</span>
                     </div>
                     <div className="flex gap-2 mt-2 text-sm">
                       <span>📞 {home.phone}</span>
                       {home.has_ambulance && (
-                        <span className="flex items-center gap-1 text-xs">
-                          <Car className="w-3 h-3" /> Car
+                        <span className="flex items-center gap-1 text-xs bg-amber-500 px-2 py-0.5 rounded-full">
+                          <Car className="w-3 h-3" /> Ambulance
                         </span>
                       )}
+                    </div>
+                    <div className="mt-2 text-xs opacity-70">
+                      Capacity: {home.occupied_beds}/{home.capacity} occupied
                     </div>
                   </div>
                 ))}

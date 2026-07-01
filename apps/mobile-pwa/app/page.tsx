@@ -32,6 +32,7 @@ import MaternalTimeline from "./components/features/MaternalTimeline";
 import CommunityHealthWorkerMode from "./components/features/CommunityHealthWorkerMode";
 import VoiceAssistant from "./components/features/VoiceAssistant";
 import LiveNationalDashboard from "./components/features/LiveNationalDashboard";
+import OfflineSyncIndicator from "./components/OfflineSyncIndicator";
 
 export default function HomePage() {
   const [isOnline, setIsOnline] = useState(true);
@@ -87,16 +88,7 @@ export default function HomePage() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {!isOnline && (
-              <span className="flex items-center gap-1 text-xs bg-amber-100 text-amber-700 px-2 py-1 rounded-full">
-                <span className="w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse" />
-                Offline Mode
-              </span>
-            )}
-            <span className="text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-medium flex items-center gap-1">
-              <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-              {isOnline ? "Live" : "Offline"}
-            </span>
+            <OfflineSyncIndicator />
             <span className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-full font-medium">
               🇬🇭 Ghana
             </span>
@@ -152,7 +144,7 @@ export default function HomePage() {
           </button>
         </div>
 
-        {/* Emergency Button */}
+        {/* Emergency Button - Prominent */}
         <EmergencyButton />
 
         {/* Quick Stats */}
