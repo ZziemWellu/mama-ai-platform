@@ -3,42 +3,51 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, MapPin, Building2, Shield } from "lucide-react";
+import { assessAccessRisk, ApiError } from "../lib/api";
+import { useRequireAuth } from "../lib/useRequireAuth";
 
 export default function WaitingHomePage() {
   const router = useRouter();
+  const { ready } = useRequireAuth();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [formData, setFormData] = useState({
     patient_id: "P003",
-    latitude: 7.3833,
-    longitude: -1.3667,
     gestation_weeks: 38,
     distance_to_facility_km: 25,
-    has_transport: false,
+    transport_available: false,
     previous_complications: false,
-    road_conditions: "fair",
   });
 
   const handleAssess = async () => {
     setLoading(true);
     try {
-      const res = await fetch("https://mama-ai-access-risk.onrender.com/api/v1/access-risk/assess", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-      const data = await res.json();
+      // This used to call a separate `mama-ai-access-risk.onrender.com` host that isn't part of this
+      // deployment at all (dead link) — /access-risk/assess is the real, existing route, on the same
+      // backend as everything else. Its response shape today is {risk_level, reason, recommendation,
+      // distance_km, transport_available} — the richer {waiting_homes: [...], risk_score} shape this
+      // page used to assume was never actually implemented server-side; surfacing real nearby waiting
+      // homes (GET /waiting-centers/) is Phase B work, not a wiring fix.
+      const data = await assessAccessRisk(formData);
       setResult(data);
     } catch (error) {
-      alert("Failed to connect to access risk service. Please try again.");
+      alert(error instanceof ApiError ? error.message : "Failed to connect to access risk service. Please try again.");
     }
     setLoading(false);
   };
 
+  if (!ready) {
+    return (
+      <div className="min-h-screen bg-slate-100 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-purple-600" />
+      </div>
+    );
+  }
+
   const getRiskColor = (level?: string) => {
     if (level === "CRITICAL") return "bg-red-600 text-white";
     if (level === "HIGH") return "bg-orange-500 text-white";
-    if (level === "MEDIUM") return "bg-yellow-500 text-black";
+    if (level === "MODERATE") return "bg-yellow-500 text-black";
     return "bg-green-500 text-white";
   };
 
@@ -95,8 +104,8 @@ export default function WaitingHomePage() {
                 <label className="flex items-center gap-2 text-sm">
                   <input
                     type="checkbox"
-                    checked={formData.has_transport}
-                    onChange={(e) => setFormData({ ...formData, has_transport: e.target.checked })}
+                    checked={formData.transport_available}
+                    onChange={(e) => setFormData({ ...formData, transport_available: e.target.checked })}
                     className="rounded"
                   />
                   Has Transport
@@ -133,39 +142,21 @@ export default function WaitingHomePage() {
             </h3>
 
             {result ? (
-              <div className={`p-4 rounded-xl ${getRiskColor(result.access_risk_level)}`}>
-                <div className="flex justify-between">
-                  <div>
-                    <p className="text-sm opacity-75">Access Risk</p>
-                    <p className="text-2xl font-bold">{result.access_risk_level}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm opacity-75">Score</p>
-                    <p className="text-lg font-bold">{result.risk_score}/100</p>
-                  </div>
-                </div>
+              <div className={`p-4 rounded-xl ${getRiskColor(result.risk_level)}`}>
+                <p className="text-sm opacity-75">Access Risk</p>
+                <p className="text-2xl font-bold">{result.risk_level}</p>
 
-                {result.waiting_homes && result.waiting_homes.length > 0 && (
+                {result.recommendation && (
                   <div className="mt-3">
-                    <p className="font-semibold text-sm">🏠 Recommended Waiting Homes:</p>
-                    {result.waiting_homes.map((home: any, i: number) => (
-                      <div key={i} className="bg-white/20 p-3 rounded-lg mt-2">
-                        <p className="font-medium">{home.name}</p>
-                        <div className="flex gap-3 text-sm mt-1">
-                          <span>📍 {home.distance_km} km</span>
-                          <span>⏱ {home.estimated_travel_time_minutes} min</span>
-                        </div>
-                        <p className="text-sm">📞 {home.phone}</p>
-                        <p className="text-sm">🛏 {home.available_beds} beds available</p>
-                      </div>
-                    ))}
+                    <p className="font-semibold text-sm">Recommendation:</p>
+                    <p className="text-sm">{result.recommendation}</p>
                   </div>
                 )}
 
-                {result.rationale && (
+                {result.reason && (
                   <div className="mt-2 text-sm opacity-80">
                     <p className="font-semibold">Why:</p>
-                    <p>{result.rationale}</p>
+                    <p>{result.reason}</p>
                   </div>
                 )}
               </div>

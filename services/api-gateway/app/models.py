@@ -13,8 +13,9 @@ class User(Base):
     phone_number = Column(String(20), unique=True)
     email = Column(String(255), unique=True)
     full_name = Column(String(100))
+    password_hash = Column(String(255), nullable=False)
     role = Column(String(50))
-    facility_id = Column(UUID(as_uuid=True))
+    facility_id = Column(UUID(as_uuid=True), ForeignKey("facilities.id"))
     is_active = Column(Boolean, default=True)
     last_login = Column(DateTime)
     created_at = Column(DateTime, server_default=func.now())
@@ -94,6 +95,25 @@ class RiskAssessment(Base):
     referral_facility_id = Column(UUID(as_uuid=True), ForeignKey("facilities.id"))
     patient_outcome = Column(String(50))
     created_at = Column(DateTime, server_default=func.now())
+
+class AccessRiskAssessment(Base):
+    # Mirrors the `access_risk_assessments` table that has existed in database/migrations/001 since
+    # the start — it just never had a matching ORM model, so app/api/access_risk.py never persisted
+    # anything, only computed a response and threw it away. Real persistence is wired up in Phase B.
+    __tablename__ = "access_risk_assessments"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    patient_id = Column(UUID(as_uuid=True), ForeignKey("patients.id"))
+    distance_to_facility_km = Column(Float)
+    transport_available = Column(Boolean)
+    previous_complications = Column(Boolean)
+    gestation_weeks = Column(Integer)
+    predicted_travel_time_minutes = Column(Integer)
+    access_risk_level = Column(String(20))
+    recommended_waiting_center_id = Column(UUID(as_uuid=True), ForeignKey("facilities.id"))
+    recommended_at = Column(DateTime, server_default=func.now())
+    created_at = Column(DateTime, server_default=func.now())
+
 
 class MaternalWaitingCenter(Base):
     __tablename__ = "maternal_waiting_centers"

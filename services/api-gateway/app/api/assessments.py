@@ -3,8 +3,9 @@ from sqlalchemy.orm import Session
 import uuid
 import logging
 
+from app.core.auth import get_current_user, require_same_facility_or_admin
 from app.core.database import get_db
-from app.models import RiskAssessment, Patient
+from app.models import RiskAssessment, Patient, User
 from app.schemas import AssessmentRequest
 from app.enums import PrimaryCondition, RiskLevel
 
@@ -35,20 +36,23 @@ CLINICAL_RULES = {
 }
 
 @router.post("/assess")
-async def assess_risk(request: AssessmentRequest, db: Session = Depends(get_db)):
+async def assess_risk(request: AssessmentRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     try:
         logger.info(f"Received assessment request for patient: {request.patient_id}")
-        
+
         # Get or create patient
-        patient = get_or_create_patient(request, db)
+        patient = get_or_create_patient(request, db, current_user)
+        if patient.facility_id:
+            require_same_facility_or_admin(current_user, patient.facility_id)
         logger.info(f"Patient found/created: {patient.id}")
-        
+
         # Check hard rules
         hard_risk = check_hard_rules(request)
-        
+
         if hard_risk:
             assessment = RiskAssessment(
                 patient_id=patient.id,
+                midwife_id=current_user.id,
                 risk_level=RiskLevel.CRITICAL.value,
                 primary_condition=hard_risk["condition"].value,
                 confidence_score=hard_risk["confidence_score"],
@@ -82,6 +86,7 @@ async def assess_risk(request: AssessmentRequest, db: Session = Depends(get_db))
         # Fallback - Normal
         assessment = RiskAssessment(
             patient_id=patient.id,
+            midwife_id=current_user.id,
             risk_level=RiskLevel.LOW.value,
             primary_condition=PrimaryCondition.NORMAL.value,
             confidence_score=0.90,
@@ -116,7 +121,7 @@ async def assess_risk(request: AssessmentRequest, db: Session = Depends(get_db))
         logger.error(f"Error in assess_risk: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
-def get_or_create_patient(request, db):
+def get_or_create_patient(request, db, current_user):
     # Try to find by UUID
     try:
         patient_uuid = uuid.UUID(request.patient_id)
@@ -125,16 +130,19 @@ def get_or_create_patient(request, db):
             return patient
     except ValueError:
         pass
-    
+
     # Try by patient_code
     patient = db.query(Patient).filter(Patient.patient_code == request.patient_id).first()
     if patient:
         return patient
-    
-    # Create new
+
+    # Create new — attached to the assessing user's own facility by default, so a CHW/midwife's own
+    # patients stay scoped to them (see require_same_facility_or_admin), same as a patient created
+    # explicitly through POST /patients.
     new_uuid = uuid.uuid4()
     patient = Patient(
         id=new_uuid,
+        facility_id=current_user.facility_id,
         patient_code=request.patient_id if request.patient_id.startswith('P') else f"P{str(new_uuid)[:8]}",
         gestation_weeks=request.obstetric_history.gestation_weeks,
         previous_csection=request.obstetric_history.previous_csection,

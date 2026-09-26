@@ -4,13 +4,16 @@ import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, Heart, AlertTriangle, Activity, MapPin, Clock, Shield } from "lucide-react";
 import RiskExplanation from "../components/RiskExplanation";
+import { assessRisk, ApiError } from "../lib/api";
+import { useRequireAuth } from "../lib/useRequireAuth";
 
 // Inner component that uses useSearchParams
 function AssessmentContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const isEmergency = searchParams?.get('emergency') === 'true';
-  
+  const { ready } = useRequireAuth();
+
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [formData, setFormData] = useState({
@@ -37,7 +40,7 @@ function AssessmentContent() {
   });
 
   useEffect(() => {
-    if (isEmergency) {
+    if (isEmergency && ready) {
       // Auto-fill emergency assessment
       setFormData({
         ...formData,
@@ -48,21 +51,25 @@ function AssessmentContent() {
       });
       handleAssess();
     }
-  }, [isEmergency]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isEmergency, ready]);
+
+  if (!ready) {
+    return (
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-teal-600" />
+      </div>
+    );
+  }
 
   const handleAssess = async () => {
     setLoading(true);
     setResult(null);
     try {
-      const res = await fetch("https://mama-ai-api.onrender.com/api/v1/assessments/assess", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-      const data = await res.json();
+      const data = await assessRisk(formData);
       setResult(data);
     } catch (error) {
-      setResult({ error: "Failed to connect to API" });
+      setResult({ error: error instanceof ApiError ? error.message : "Failed to connect to API" });
     }
     setLoading(false);
   };

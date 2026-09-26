@@ -158,6 +158,7 @@ class UserCreate(BaseModel):
     phone_number: str
     email: Optional[str] = None
     full_name: str
+    password: str = Field(..., min_length=8)
     role: str
     facility_id: Optional[str] = None
 
@@ -175,4 +176,4 @@ class Token(BaseModel):
 
 class LoginRequest(BaseModel):
     phone_number: str
-    password: Optional[str] = None
+    password: str
