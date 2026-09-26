@@ -29,10 +29,10 @@ def client():
 
 @pytest.fixture
 def make_facility():
-    def _make_facility(name="Test Facility"):
+    def _make_facility(name="Test Facility", latitude=None, longitude=None, **kwargs):
         db = SessionLocal()
         try:
-            facility = Facility(id=uuid.uuid4(), name=name)
+            facility = Facility(id=uuid.uuid4(), name=name, latitude=latitude, longitude=longitude, **kwargs)
             db.add(facility)
             db.commit()
             db.refresh(facility)
