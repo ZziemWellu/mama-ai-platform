@@ -5,7 +5,8 @@ import logging
 
 from app.core.auth import get_current_user, require_same_facility_or_admin
 from app.core.database import get_db
-from app.models import RiskAssessment, Patient, User
+from app.core.geo import estimate_travel_minutes, haversine_km
+from app.models import Facility, RiskAssessment, Patient, User
 from app.schemas import AssessmentRequest
 from app.enums import PrimaryCondition, RiskLevel
 
@@ -13,6 +14,15 @@ router = APIRouter()
 logger = logging.getLogger(__name__)
 
 # Clinical rules
+#
+# PPH and PRE_ECLAMPSIA below are direct, single-measurement rules (a bleeding volume, a BP+headache
+# pair) — the same kind of hard threshold a paper-based protocol already uses. OBSTRUCTED_LABOUR and
+# SEPSIS are necessarily weaker proxies: this app collects no cervical-dilation/partograph data (so
+# "no labour progress" can't be observed directly) and no lab access (so sepsis can't be confirmed by
+# blood culture or lactate). Both use WHO-aligned bedside screening signs instead — prolonged active
+# labour + severe pain, and fever + foul-smelling discharge — with intentionally lower confidence
+# scores than PPH/pre-eclampsia to reflect that they're screening heuristics, not exam-confirmed
+# findings. A clinician should review these exact thresholds before this is used on a real patient.
 CLINICAL_RULES = {
     "PPH": {
         "condition": PrimaryCondition.PPH,
@@ -31,6 +41,28 @@ CLINICAL_RULES = {
             "Administer magnesium sulfate",
             "Prepare urgent referral",
             "Monitor BP every 15 minutes"
+        ]
+    },
+    "OBSTRUCTED_LABOUR": {
+        "condition": PrimaryCondition.OBSTRUCTED_LABOUR,
+        "thresholds": {"labour_hours": 12, "abdominal_pain_severity": 8},
+        "actions": [
+            "Do NOT augment labour with oxytocin",
+            "Keep patient nil by mouth",
+            "Position in left lateral position",
+            "Monitor fetal heart rate continuously",
+            "Prepare urgent referral for possible caesarean section"
+        ]
+    },
+    "SEPSIS": {
+        "condition": PrimaryCondition.SEPSIS,
+        "thresholds": {"temperature_c": 38.0, "foul_discharge": True},
+        "actions": [
+            "Start IV fluids",
+            "Give broad-spectrum IV antibiotics if available",
+            "Reduce fever (tepid sponging / antipyretic)",
+            "Monitor temperature and pulse every 30 minutes",
+            "Prepare urgent referral"
         ]
     }
 }
@@ -80,7 +112,7 @@ async def assess_risk(request: AssessmentRequest, db: Session = Depends(get_db),
                 "explanation": hard_risk["explanation"],
                 "shap_summary": {"bleeding_volume": 0.85},
                 "recommended_actions": hard_risk["actions"],
-                "referral_options": get_referral_options()
+                "referral_options": get_referral_options(db, patient)
             }
         
         # Fallback - Normal
@@ -114,7 +146,7 @@ async def assess_risk(request: AssessmentRequest, db: Session = Depends(get_db),
             "explanation": "No significant danger signs detected",
             "shap_summary": {},
             "recommended_actions": ["Routine monitoring", "Document findings"],
-            "referral_options": get_referral_options()
+            "referral_options": get_referral_options(db, patient)
         }
     
     except Exception as e:
@@ -162,7 +194,7 @@ def check_hard_rules(request):
             "actions": CLINICAL_RULES["PPH"]["actions"]
         }
     
-    if (request.vitals.systolic_bp and request.vitals.systolic_bp >= 160 and 
+    if (request.vitals.systolic_bp and request.vitals.systolic_bp >= 160 and
         request.symptoms.headache_severity and request.symptoms.headache_severity >= 7):
         return {
             "condition": CLINICAL_RULES["PRE_ECLAMPSIA"]["condition"],
@@ -170,23 +202,63 @@ def check_hard_rules(request):
             "explanation": f"BP {request.vitals.systolic_bp} with severe headache indicates pre-eclampsia",
             "actions": CLINICAL_RULES["PRE_ECLAMPSIA"]["actions"]
         }
-    
+
+    if (request.obstetric_history.labour_hours and request.obstetric_history.labour_hours >= 12 and
+        request.symptoms.abdominal_pain_severity and request.symptoms.abdominal_pain_severity >= 8):
+        return {
+            "condition": CLINICAL_RULES["OBSTRUCTED_LABOUR"]["condition"],
+            "confidence_score": 0.85,
+            "explanation": (
+                f"Labour lasting {request.obstetric_history.labour_hours}h with severe abdominal pain "
+                f"(severity {request.symptoms.abdominal_pain_severity}/10) suggests obstructed labour"
+            ),
+            "actions": CLINICAL_RULES["OBSTRUCTED_LABOUR"]["actions"]
+        }
+
+    if (
+        (request.symptoms.fever or (request.vitals.temperature and request.vitals.temperature >= 38.0))
+        and request.symptoms.foul_discharge
+    ):
+        return {
+            "condition": CLINICAL_RULES["SEPSIS"]["condition"],
+            "confidence_score": 0.85,
+            "explanation": "Fever with foul-smelling discharge suggests maternal sepsis",
+            "actions": CLINICAL_RULES["SEPSIS"]["actions"]
+        }
+
     return None
 
-def get_referral_options():
+def get_referral_options(db: Session, patient: Patient):
+    # Real facilities (see seed_facilities.py), ranked by real distance from the patient's own
+    # facility when that facility has coordinates on file — this used to be two hardcoded entries
+    # ("Ejura District Hospital"/"Nkwanta Health Centre") with placeholder phone numbers, returned
+    # unconditionally regardless of who or where the patient actually was.
+    origin = db.query(Facility).filter(Facility.id == patient.facility_id).first() if patient.facility_id else None
+    candidates = db.query(Facility).filter(Facility.has_maternity == True).all()
+
+    if origin and origin.latitude is not None and origin.longitude is not None:
+        ranked = sorted(
+            (f for f in candidates if f.id != origin.id and f.latitude is not None and f.longitude is not None),
+            key=lambda f: haversine_km(origin.latitude, origin.longitude, f.latitude, f.longitude),
+        )[:2]
+        return [
+            {
+                "facility_name": f.name,
+                "distance_km": round(haversine_km(origin.latitude, origin.longitude, f.latitude, f.longitude), 1),
+                "estimated_travel_minutes": estimate_travel_minutes(haversine_km(origin.latitude, origin.longitude, f.latitude, f.longitude)),
+                "phone": f.phone,
+                "has_csection": f.has_csection or False,
+            } for f in ranked
+        ]
+
+    # No known origin facility — can't rank by distance, so just surface real facilities without a
+    # fabricated distance, same honest-null pattern as facilities.py/referrals.py.
     return [
         {
-            "facility_name": "Ejura District Hospital",
-            "distance_km": 25,
-            "estimated_travel_minutes": 45,
-            "phone": "024XXXXXXX",
-            "has_csection": True
-        },
-        {
-            "facility_name": "Nkwanta Health Centre",
-            "distance_km": 18,
-            "estimated_travel_minutes": 30,
-            "phone": "024YYYYYYY",
-            "has_csection": False
-        }
+            "facility_name": f.name,
+            "distance_km": None,
+            "estimated_travel_minutes": None,
+            "phone": f.phone,
+            "has_csection": f.has_csection or False,
+        } for f in candidates[:2]
     ]
