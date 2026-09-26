@@ -3,15 +3,18 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, MapPin, Building2 } from "lucide-react";
+import { recommendReferral, ApiError } from "../lib/api";
+import { useRequireAuth } from "../lib/useRequireAuth";
 
 export default function ReferralPage() {
   const router = useRouter();
+  const { ready } = useRequireAuth();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
   const [formData, setFormData] = useState({
     patient_id: "P004",
-    latitude: 7.3833,
-    longitude: -1.3667,
+    current_latitude: 7.3833,
+    current_longitude: -1.3667,
     gestation_weeks: 39,
     risk_level: "CRITICAL",
     primary_condition: "PPH",
@@ -22,18 +25,21 @@ export default function ReferralPage() {
   const handleReferral = async () => {
     setLoading(true);
     try {
-      const res = await fetch("https://mama-ai-api.onrender.com/api/v1/referrals/recommend", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-      const data = await res.json();
+      const data = await recommendReferral(formData);
       setResult(data);
     } catch (error) {
-      alert("Failed to get referral recommendations");
+      alert(error instanceof ApiError ? error.message : "Failed to get referral recommendations");
     }
     setLoading(false);
   };
+
+  if (!ready) {
+    return (
+      <div className="min-h-screen bg-slate-100 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-100">

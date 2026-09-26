@@ -6,9 +6,10 @@ const nextConfig = {
     unoptimized: true,  // Required for static export
   },
   trailingSlash: true,
-  env: {
-    NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL || 'https://mama-ai-api.onrender.com/api/v1',
-  },
+  // NEXT_PUBLIC_API_URL is read directly from process.env at build time (Next.js inlines any
+  // NEXT_PUBLIC_* var automatically — no `env` block needed). This used to hardcode a fallback to
+  // the old Render URL here, which silently overrode app/lib/api.ts's own (safer, localhost) fallback
+  // any time the real env var wasn't set at build time — i.e. every local build.
 }
 
 module.exports = nextConfig

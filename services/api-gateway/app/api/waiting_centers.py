@@ -2,8 +2,9 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 from typing import List
 
+from app.core.auth import get_current_user
 from app.core.database import get_db
-from app.models import MaternalWaitingCenter
+from app.models import MaternalWaitingCenter, User
 from app.schemas import WaitingCenterRequest, WaitingCenterResponse
 
 router = APIRouter()
@@ -11,7 +12,8 @@ router = APIRouter()
 @router.post("/recommend", response_model=WaitingCenterResponse)
 async def recommend_waiting_center(
     request: WaitingCenterRequest,
-    db: Session = Depends(get_db)
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
     # Check if patient needs waiting center
     if request.gestation_weeks < 37:
@@ -58,7 +60,7 @@ async def recommend_waiting_center(
     )
 
 @router.get("/")
-async def get_waiting_centers(db: Session = Depends(get_db)):
+async def get_waiting_centers(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     centers = db.query(MaternalWaitingCenter).all()
     return [
         {

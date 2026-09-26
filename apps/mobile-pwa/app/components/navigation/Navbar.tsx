@@ -1,8 +1,9 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
+import { getToken, logout } from '../../lib/api'
 import {
   Heart,
   Home,
@@ -25,6 +26,8 @@ import {
   Mic,
   Wifi,
   Stethoscope,
+  LogIn,
+  LogOut,
 } from 'lucide-react'
 
 interface NavItem {
@@ -83,7 +86,21 @@ const navItems: NavItem[] = [
 export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [openDropdown, setOpenDropdown] = useState<string | null>(null)
+  const [isSignedIn, setIsSignedIn] = useState(false)
   const pathname = usePathname()
+  const router = useRouter()
+
+  // Re-checked on every navigation (not just once on mount) so signing in/out on another page is
+  // reflected here without a full reload.
+  useEffect(() => {
+    setIsSignedIn(Boolean(getToken()))
+  }, [pathname])
+
+  const handleSignOut = () => {
+    logout()
+    setIsSignedIn(false)
+    router.push('/login')
+  }
 
   const toggleDropdown = (label: string) => {
     setOpenDropdown(openDropdown === label ? null : label)
@@ -176,6 +193,16 @@ export default function Navbar() {
                 🚨 Emergency
               </button>
             </Link>
+
+            {isSignedIn ? (
+              <button onClick={handleSignOut} className="ml-2 px-3 py-2 rounded-lg text-gray-600 text-sm font-medium hover:bg-gray-100 transition flex items-center gap-1.5">
+                <LogOut className="w-4 h-4" /> Sign out
+              </button>
+            ) : (
+              <Link href="/login" className="ml-2 px-3 py-2 rounded-lg text-gray-600 text-sm font-medium hover:bg-gray-100 transition flex items-center gap-1.5">
+                <LogIn className="w-4 h-4" /> Sign in
+              </Link>
+            )}
           </div>
 
           {/* Mobile Menu Button */}
@@ -246,6 +273,23 @@ export default function Navbar() {
                 )}
               </div>
             ))}
+
+            {isSignedIn ? (
+              <button
+                onClick={() => { setIsMobileMenuOpen(false); handleSignOut(); }}
+                className="flex items-center gap-3 w-full px-4 py-2 text-sm text-left text-gray-700 hover:bg-gray-50 rounded-lg transition"
+              >
+                <LogOut className="w-4 h-4" /> Sign out
+              </button>
+            ) : (
+              <Link
+                href="/login"
+                onClick={() => setIsMobileMenuOpen(false)}
+                className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 rounded-lg transition"
+              >
+                <LogIn className="w-4 h-4" /> Sign in
+              </Link>
+            )}
           </div>
         )}
       </div>

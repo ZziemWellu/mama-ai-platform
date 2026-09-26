@@ -4,14 +4,15 @@ from typing import List
 import uuid
 from datetime import datetime
 
+from app.core.auth import get_current_user, require_same_facility_or_admin
 from app.core.database import get_db
-from app.models import ReferralEvent, Patient, Facility
+from app.models import ReferralEvent, Patient, Facility, User
 from app.schemas import ReferralRequest, ReferralResponse, FacilityOut
 
 router = APIRouter()
 
 @router.post("/recommend", response_model=ReferralResponse)
-async def recommend_referral(request: ReferralRequest, db: Session = Depends(get_db)):
+async def recommend_referral(request: ReferralRequest, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
     """
     Recommend nearest referral facility with travel information.
     Mobile-optimized for quick response.
@@ -20,6 +21,8 @@ async def recommend_referral(request: ReferralRequest, db: Session = Depends(get
     patient = db.query(Patient).filter(Patient.id == request.patient_id).first()
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
+    if patient.facility_id:
+        require_same_facility_or_admin(current_user, patient.facility_id)
     
     # Query nearby facilities
     facilities = db.query(Facility).filter(
@@ -80,7 +83,10 @@ MAMA-AI - AI-Powered Referral System
 """
 
 @router.get("/status/{patient_id}")
-async def get_referral_status(patient_id: str, db: Session = Depends(get_db)):
+async def get_referral_status(patient_id: str, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    patient = db.query(Patient).filter(Patient.id == patient_id).first()
+    if patient and patient.facility_id:
+        require_same_facility_or_admin(current_user, patient.facility_id)
     referrals = db.query(ReferralEvent).filter(
         ReferralEvent.patient_id == patient_id
     ).order_by(ReferralEvent.referral_time.desc()).limit(5).all()
