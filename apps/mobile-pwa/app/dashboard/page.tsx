@@ -68,7 +68,7 @@ export default function DashboardPage() {
           })}
         </div>
 
-        {stats?.average_icer_usd_per_daly !== undefined && (
+        {stats?.average_icer_usd_per_daly != null && (
           <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
             <div className="flex items-center gap-2">
               <Award className="w-5 h-5 text-indigo-600" />
