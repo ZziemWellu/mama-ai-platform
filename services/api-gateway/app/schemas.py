@@ -79,9 +79,12 @@ class FacilityOut(BaseModel):
     id: str
     name: str
     type: str
-    distance_km: float
-    travel_minutes: int
-    phone: str
+    # None when no reference point (lat/lng) was given to compute a real distance from — never a
+    # fabricated placeholder number. Same reasoning for phone: not in the real seeded dataset (see
+    # seed_facilities.py), so it's None rather than a fake "024XXXXXXX".
+    distance_km: Optional[float] = None
+    travel_minutes: Optional[int] = None
+    phone: Optional[str] = None
     has_csection: bool
     has_ambulance: bool = False
 
