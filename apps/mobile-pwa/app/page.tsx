@@ -35,7 +35,6 @@ import MaternalTimeline from "./components/features/MaternalTimeline";
 import CommunityHealthWorkerMode from "./components/features/CommunityHealthWorkerMode";
 import VoiceAssistant from "./components/features/VoiceAssistant";
 import LiveNationalDashboard from "./components/features/LiveNationalDashboard";
-import OfflineSyncIndicator from "./components/OfflineSyncIndicator";
 import GuidedDemo from "./components/features/demo/GuidedDemo";
 import ExplainableAIVisual from "./components/features/visualizations/ExplainableAIVisual";
 import HealthEconomicsVisual from "./components/features/visualizations/HealthEconomicsVisual";

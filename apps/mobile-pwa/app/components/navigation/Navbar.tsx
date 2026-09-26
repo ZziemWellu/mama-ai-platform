@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { getToken, logout } from '../../lib/api'
+import OfflineSyncIndicator from '../OfflineSyncIndicator'
 import {
   Heart,
   Home,
@@ -186,6 +187,8 @@ export default function Navbar() {
               </div>
             ))}
 
+            <OfflineSyncIndicator />
+
             {/* Emergency Action Button */}
             <Link href="/assessment?emergency=true">
               <button className="ml-2 px-4 py-2 rounded-lg bg-red-600 text-white text-sm font-medium hover:bg-red-700 transition flex items-center gap-2">
@@ -273,6 +276,10 @@ export default function Navbar() {
                 )}
               </div>
             ))}
+
+            <div className="px-4 py-2">
+              <OfflineSyncIndicator />
+            </div>
 
             {isSignedIn ? (
               <button
