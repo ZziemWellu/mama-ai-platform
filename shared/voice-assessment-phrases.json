@@ -1,0 +1,14 @@
+[
+  { "id": "welcome", "en": "Welcome to MAMA-AI. I will guide you through the emergency assessment. Let's begin." },
+  { "id": "bleeding", "en": "Is the mother bleeding? Choose none, light, heavy, or very heavy." },
+  { "id": "conscious", "en": "Is she conscious and responsive?" },
+  { "id": "blood_pressure", "en": "What is her blood pressure? Enter the top number, then the bottom number." },
+  { "id": "headache", "en": "How severe is her headache? Choose none, mild, moderate, or severe." },
+  { "id": "visual_changes", "en": "Are there any visual changes or blurred vision?" },
+  { "id": "abdominal_pain", "en": "How severe is her abdominal pain? Choose none, mild, moderate, or severe." },
+  { "id": "foul_discharge", "en": "Is there any foul-smelling discharge?" },
+  { "id": "fever", "en": "Does she have a fever?" },
+  { "id": "labour_hours", "en": "How many hours has she been in labour? Enter the number of hours." },
+  { "id": "previous_csection", "en": "Has she had a previous caesarean section?" },
+  { "id": "complete", "en": "Assessment complete. Processing your results." }
+]
