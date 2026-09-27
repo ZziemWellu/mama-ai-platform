@@ -10,14 +10,17 @@ services:
     # which is real extra work saved for later rather than done now.
     region: oregon
     rootDir: services/api-gateway
-    # preDeployCommand and One-Off Jobs (Render's two dedicated ways to run this) both require a paid
-    # plan — confirmed against the actual free-tier service this runs on. The build step is the only
-    # place left that's free-tier-compatible; it does have access to the same env vars (DATABASE_URL
-    # included), so alembic can reach the real database from here.
+    # preDeployCommand and One-Off Jobs (Render's two dedicated ways to run one-time commands) both
+    # require a paid plan — confirmed against the actual free-tier service this runs on, same as
+    # shell/SSH access. The build step is the only place left that's free-tier-compatible and has
+    # access to the real environment (DATABASE_URL included), so both the schema migration and the
+    # facility-data seed (idempotent — safe to run on every single deploy, see seed_facilities.py)
+    # go here instead.
     buildCommand: |
       python -m pip install --upgrade pip
       pip install -r requirements.txt
       alembic upgrade head
+      python seed_facilities.py
     startCommand: |
       uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
