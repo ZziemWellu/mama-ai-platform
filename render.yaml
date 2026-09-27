@@ -8,15 +8,25 @@ services:
     buildCommand: |
       python -m pip install --upgrade pip
       pip install -r requirements.txt
+      alembic upgrade head
     startCommand: |
       uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: PYTHON_VERSION
         value: 3.10.14
+      # Paste your real Neon connection string here (Render dashboard -> this service -> Environment).
+      # Not a Render-managed database: Render's own free Postgres plan auto-deletes after 30 days of
+      # inactivity, which is what took this API down before - Neon's free tier doesn't do that.
       - key: DATABASE_URL
-        fromDatabase:
-          name: mama-ai-db
-          property: connectionString
+        sync: false
+      # Render generates a real random value for this on first deploy - never a hardcoded default.
+      - key: JWT_SECRET
+        generateValue: true
+      # The real frontend origin(s), comma-separated - e.g. the HF Static Space's URL once created.
+      # Never leave this unset in production; core/config.py falls back to localhost-only origins,
+      # which would silently break every request from the real deployed frontend.
+      - key: ALLOWED_ORIGINS
+        sync: false
       - key: ENVIRONMENT
         value: production
       - key: DEBUG
@@ -41,13 +51,3 @@ services:
           name: mama-ai-api
           type: web
           property: url
-
-databases:
-  - name: mama-ai-db
-    plan: free
-    region: oregon
-    databaseName: mama_ai
-    user: mama_ai_user
-    ipAllowList:
-      - source: 0.0.0.0/0
-        description: Allow all connections
