@@ -112,13 +112,17 @@ class WaitingCenterRequest(BaseModel):
     distance_to_facility_km: float
     transport_available: bool
     previous_complications: bool
+    # Optional: without a reference point, a recommendation can still be made (by available
+    # capacity), just not ranked by real distance.
+    current_latitude: Optional[float] = None
+    current_longitude: Optional[float] = None
 
 class WaitingCenterResponse(BaseModel):
-    recommended_center_id: str
-    center_name: str
-    capacity_available: int
-    distance_km: float
-    phone: str
+    recommended_center_id: Optional[str] = None
+    center_name: Optional[str] = None
+    capacity_available: Optional[int] = None
+    distance_km: Optional[float] = None
+    phone: Optional[str] = None
     reason: str
 
 # ============ Economics Schemas ============
@@ -126,7 +130,9 @@ class WaitingCenterResponse(BaseModel):
 class EconomicsResponse(BaseModel):
     total_cost_savings_ghs: int
     total_dalys_averted: float
-    average_icer_usd_per_daly: int
+    # None when there's no real cost/DALY data yet to compute a ratio from — never a fabricated
+    # figure standing in for "no data".
+    average_icer_usd_per_daly: Optional[float] = None
     high_risk_cases: int
     successful_referrals: int
     by_facility: List[Dict]
