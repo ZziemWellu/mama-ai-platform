@@ -3,20 +3,42 @@ services:
     name: mama-ai-api
     runtime: python
     plan: free
+    # Oregon, not Frankfurt: this project's mama-ai-api/mama-ai-dashboard services already exist on
+    # Render in Oregon from the original deploy. Frankfurt would be a real latency improvement for
+    # Ghana-based users (see the Neon project's own region), but Render doesn't support changing a
+    # live service's region in place — that would mean standing up new services and retiring these,
+    # which is real extra work saved for later rather than done now.
     region: oregon
     rootDir: services/api-gateway
+    # preDeployCommand and One-Off Jobs (Render's two dedicated ways to run one-time commands) both
+    # require a paid plan — confirmed against the actual free-tier service this runs on, same as
+    # shell/SSH access. The build step is the only place left that's free-tier-compatible and has
+    # access to the real environment (DATABASE_URL included), so both the schema migration and the
+    # facility-data seed (idempotent — safe to run on every single deploy, see seed_facilities.py)
+    # go here instead.
     buildCommand: |
       python -m pip install --upgrade pip
       pip install -r requirements.txt
+      alembic upgrade head
+      python seed_facilities.py
     startCommand: |
       uvicorn app.main:app --host 0.0.0.0 --port $PORT
     envVars:
       - key: PYTHON_VERSION
         value: 3.10.14
+      # Paste your real Neon connection string here (Render dashboard -> this service -> Environment).
+      # Not a Render-managed database: Render's own free Postgres plan auto-deletes after 30 days of
+      # inactivity, which is what took this API down before - Neon's free tier doesn't do that.
       - key: DATABASE_URL
-        fromDatabase:
-          name: mama-ai-db
-          property: connectionString
+        sync: false
+      # Render generates a real random value for this on first deploy - never a hardcoded default.
+      - key: JWT_SECRET
+        generateValue: true
+      # The real frontend origin(s), comma-separated - the mama-ai-pwa static site's own URL below.
+      # Never leave this unset in production; core/config.py falls back to localhost-only origins,
+      # which would silently break every request from the real deployed frontend.
+      - key: ALLOWED_ORIGINS
+        sync: false
       - key: ENVIRONMENT
         value: production
       - key: DEBUG
@@ -42,12 +64,16 @@ services:
           type: web
           property: url
 
-databases:
-  - name: mama-ai-db
-    plan: free
-    region: oregon
-    databaseName: mama_ai
-    user: mama_ai_user
-    ipAllowList:
-      - source: 0.0.0.0/0
-        description: Allow all connections
+# Documents the mama-ai-pwa static site's real settings — it already exists on Render (created before
+# this file described it), so this isn't applied automatically; update its Settings -> Build & Deploy
+# in the Render dashboard directly to match, rather than relying on a Blueprint sync against a
+# manually-created service.
+staticSites:
+  - name: mama-ai-pwa
+    rootDir: apps/mobile-pwa
+    buildCommand: npm ci && npm run build
+    staticPublishPath: out
+    envVars:
+      # This service's own real URL, plus /api/v1 - e.g. https://mama-ai-api.onrender.com/api/v1
+      - key: NEXT_PUBLIC_API_URL
+        sync: false

@@ -1,19 +1,14 @@
----
-title: MAMA AI API
-emoji: 🏥
-colorFrom: blue
-colorTo: green
-sdk: docker
-app_port: 8000
-pinned: false
----
-
 # MAMA-AI API
 
 FastAPI backend for the MAMA-AI maternal health platform. See the main repo at
-https://github.com/ZziemWellu/mama-ai-platform for source, docs and issue tracking — this Space is a
-deploy target, not the place to read or edit the code.
+https://github.com/ZziemWellu/mama-ai-platform for source, docs and issue tracking.
 
-Required Space secrets (Settings → Repository secrets): `DATABASE_URL`, `JWT_SECRET`, `ALLOWED_ORIGINS`.
+Deployed on Render (see `render.yaml` at the repo root) — Hugging Face Docker Spaces now require a
+paid PRO plan to create (as of mid-2026), so this stays on Render's free web service tier instead;
+only the free-tier Postgres was ever the actual problem, and that's been replaced with Neon.
+
+Required environment variables (set in the Render dashboard, not committed): `DATABASE_URL` (a Neon
+connection string), `JWT_SECRET` (Render generates this automatically), `ALLOWED_ORIGINS` (the real
+frontend origin, comma-separated if more than one).
 
 Health check: `GET /health`. Interactive API docs: `/docs`.
