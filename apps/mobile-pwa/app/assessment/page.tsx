@@ -6,6 +6,8 @@ import { ArrowLeft, Heart, AlertTriangle, Activity, MapPin, Clock, Shield } from
 import RiskExplanation from "../components/RiskExplanation";
 import { assessRisk, ApiError } from "../lib/api";
 import { useRequireAuth } from "../lib/useRequireAuth";
+import { assessOffline } from "../lib/offlineRiskRules";
+import { enqueue } from "../lib/offlineQueue";
 
 // Inner component that uses useSearchParams
 function AssessmentContent() {
@@ -69,7 +71,24 @@ function AssessmentContent() {
       const data = await assessRisk(formData);
       setResult(data);
     } catch (error) {
-      setResult({ error: error instanceof ApiError ? error.message : "Failed to connect to API" });
+      if (error instanceof ApiError) {
+        // The server answered — a real validation/auth error, not a connectivity problem. Never
+        // route this through the offline path; that would hide a real mistake behind an unverified
+        // local guess.
+        setResult({ error: error.message });
+      } else {
+        // No response at all — genuinely offline. Give an instant on-device read from the same hard
+        // rules the server uses (app/lib/offlineRiskRules.ts), clearly marked as unverified, and
+        // queue the real submission for the moment connectivity returns.
+        const offlineResult = assessOffline(formData);
+        setResult({
+          ...offlineResult,
+          assessment_id: null,
+          shap_summary: {},
+          referral_options: [],
+        });
+        await enqueue("assessment", formData);
+      }
     }
     setLoading(false);
   };
@@ -283,13 +302,21 @@ function AssessmentContent() {
                 {result.error}
               </div>
             ) : (
-              <RiskExplanation
-                riskLevel={result.risk_level}
-                confidenceScore={result.confidence_score}
-                shapSummary={result.shap_summary || {}}
-                explanation={result.explanation || "No explanation available"}
-                primaryCondition={result.primary_condition}
-              />
+              <div className="space-y-3">
+                {result.offline && (
+                  <div className="bg-amber-50 border-2 border-amber-400 p-3 rounded-xl text-amber-800 text-sm font-semibold flex items-center gap-2">
+                    ⚠️ Offline estimate — not yet confirmed by the server. This will be re-checked
+                    automatically the moment you're back online (queued below).
+                  </div>
+                )}
+                <RiskExplanation
+                  riskLevel={result.risk_level}
+                  confidenceScore={result.confidence_score}
+                  shapSummary={result.shap_summary || {}}
+                  explanation={result.explanation || "No explanation available"}
+                  primaryCondition={result.primary_condition}
+                />
+              </div>
             )
           ) : (
             <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 sticky top-20">

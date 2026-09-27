@@ -1,0 +1,74 @@
+[
+  {
+    "name": "normal vitals, no danger signs",
+    "input": {
+      "symptoms": { "bleeding_volume": 0, "headache_severity": 0, "visual_changes": false, "abdominal_pain_severity": 0, "foul_discharge": false, "fever": false },
+      "vitals": { "systolic_bp": 110, "diastolic_bp": 70, "temperature": 36.8 },
+      "obstetric_history": { "gestation_weeks": 38, "labour_hours": 0, "previous_csection": false, "multiple_pregnancy": false }
+    },
+    "expected": { "condition": "NORMAL", "risk_level": "LOW" }
+  },
+  {
+    "name": "PPH: bleeding over 500mL",
+    "input": {
+      "symptoms": { "bleeding_volume": 600, "headache_severity": 0, "visual_changes": false, "abdominal_pain_severity": 0, "foul_discharge": false, "fever": false },
+      "vitals": { "systolic_bp": 110, "diastolic_bp": 70, "temperature": 36.8 },
+      "obstetric_history": { "gestation_weeks": 38, "labour_hours": 0, "previous_csection": false, "multiple_pregnancy": false }
+    },
+    "expected": { "condition": "PPH", "risk_level": "CRITICAL" }
+  },
+  {
+    "name": "pre-eclampsia: high BP + severe headache",
+    "input": {
+      "symptoms": { "bleeding_volume": 0, "headache_severity": 8, "visual_changes": false, "abdominal_pain_severity": 0, "foul_discharge": false, "fever": false },
+      "vitals": { "systolic_bp": 170, "diastolic_bp": 100, "temperature": 36.8 },
+      "obstetric_history": { "gestation_weeks": 38, "labour_hours": 0, "previous_csection": false, "multiple_pregnancy": false }
+    },
+    "expected": { "condition": "PRE_ECLAMPSIA", "risk_level": "CRITICAL" }
+  },
+  {
+    "name": "obstructed labour: prolonged labour + severe pain",
+    "input": {
+      "symptoms": { "bleeding_volume": 0, "headache_severity": 0, "visual_changes": false, "abdominal_pain_severity": 9, "foul_discharge": false, "fever": false },
+      "vitals": { "systolic_bp": 110, "diastolic_bp": 70, "temperature": 36.8 },
+      "obstetric_history": { "gestation_weeks": 38, "labour_hours": 14, "previous_csection": false, "multiple_pregnancy": false }
+    },
+    "expected": { "condition": "OBSTRUCTED_LABOUR", "risk_level": "CRITICAL" }
+  },
+  {
+    "name": "obstructed labour near-miss: prolonged labour alone, no severe pain",
+    "input": {
+      "symptoms": { "bleeding_volume": 0, "headache_severity": 0, "visual_changes": false, "abdominal_pain_severity": 2, "foul_discharge": false, "fever": false },
+      "vitals": { "systolic_bp": 110, "diastolic_bp": 70, "temperature": 36.8 },
+      "obstetric_history": { "gestation_weeks": 38, "labour_hours": 14, "previous_csection": false, "multiple_pregnancy": false }
+    },
+    "expected": { "condition": "NORMAL", "risk_level": "LOW" }
+  },
+  {
+    "name": "sepsis: fever flag + foul discharge",
+    "input": {
+      "symptoms": { "bleeding_volume": 0, "headache_severity": 0, "visual_changes": false, "abdominal_pain_severity": 0, "foul_discharge": true, "fever": true },
+      "vitals": { "systolic_bp": 110, "diastolic_bp": 70, "temperature": 36.8 },
+      "obstetric_history": { "gestation_weeks": 38, "labour_hours": 0, "previous_csection": false, "multiple_pregnancy": false }
+    },
+    "expected": { "condition": "SEPSIS", "risk_level": "CRITICAL" }
+  },
+  {
+    "name": "sepsis: measured temperature without the fever flag",
+    "input": {
+      "symptoms": { "bleeding_volume": 0, "headache_severity": 0, "visual_changes": false, "abdominal_pain_severity": 0, "foul_discharge": true, "fever": false },
+      "vitals": { "systolic_bp": 110, "diastolic_bp": 70, "temperature": 38.5 },
+      "obstetric_history": { "gestation_weeks": 38, "labour_hours": 0, "previous_csection": false, "multiple_pregnancy": false }
+    },
+    "expected": { "condition": "SEPSIS", "risk_level": "CRITICAL" }
+  },
+  {
+    "name": "sepsis near-miss: fever alone, no foul discharge",
+    "input": {
+      "symptoms": { "bleeding_volume": 0, "headache_severity": 0, "visual_changes": false, "abdominal_pain_severity": 0, "foul_discharge": false, "fever": true },
+      "vitals": { "systolic_bp": 110, "diastolic_bp": 70, "temperature": 36.8 },
+      "obstetric_history": { "gestation_weeks": 38, "labour_hours": 0, "previous_csection": false, "multiple_pregnancy": false }
+    },
+    "expected": { "condition": "NORMAL", "risk_level": "LOW" }
+  }
+]
