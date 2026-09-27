@@ -3,7 +3,10 @@ services:
     name: mama-ai-api
     runtime: python
     plan: free
-    region: oregon
+    # Frankfurt, not Oregon: this app serves Ghana, and the API talks to the database on every single
+    # request — co-locating both there (see the Neon project's own region) keeps that round trip
+    # short, on top of Frankfurt being a much shorter hop from West Africa than the US west coast.
+    region: frankfurt
     rootDir: services/api-gateway
     buildCommand: |
       python -m pip install --upgrade pip
@@ -36,7 +39,7 @@ services:
     name: mama-ai-dashboard
     runtime: python
     plan: free
-    region: oregon
+    region: frankfurt
     rootDir: apps/dashboard
     buildCommand: |
       python -m pip install --upgrade pip
