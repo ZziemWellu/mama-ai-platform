@@ -3,10 +3,12 @@ services:
     name: mama-ai-api
     runtime: python
     plan: free
-    # Frankfurt, not Oregon: this app serves Ghana, and the API talks to the database on every single
-    # request — co-locating both there (see the Neon project's own region) keeps that round trip
-    # short, on top of Frankfurt being a much shorter hop from West Africa than the US west coast.
-    region: frankfurt
+    # Oregon, not Frankfurt: this project's mama-ai-api/mama-ai-dashboard services already exist on
+    # Render in Oregon from the original deploy. Frankfurt would be a real latency improvement for
+    # Ghana-based users (see the Neon project's own region), but Render doesn't support changing a
+    # live service's region in place — that would mean standing up new services and retiring these,
+    # which is real extra work saved for later rather than done now.
+    region: oregon
     rootDir: services/api-gateway
     buildCommand: |
       python -m pip install --upgrade pip
@@ -25,7 +27,7 @@ services:
       # Render generates a real random value for this on first deploy - never a hardcoded default.
       - key: JWT_SECRET
         generateValue: true
-      # The real frontend origin(s), comma-separated - e.g. the HF Static Space's URL once created.
+      # The real frontend origin(s), comma-separated - the mama-ai-pwa static site's own URL below.
       # Never leave this unset in production; core/config.py falls back to localhost-only origins,
       # which would silently break every request from the real deployed frontend.
       - key: ALLOWED_ORIGINS
@@ -39,7 +41,7 @@ services:
     name: mama-ai-dashboard
     runtime: python
     plan: free
-    region: frankfurt
+    region: oregon
     rootDir: apps/dashboard
     buildCommand: |
       python -m pip install --upgrade pip
@@ -54,3 +56,17 @@ services:
           name: mama-ai-api
           type: web
           property: url
+
+# Documents the mama-ai-pwa static site's real settings — it already exists on Render (created before
+# this file described it), so this isn't applied automatically; update its Settings -> Build & Deploy
+# in the Render dashboard directly to match, rather than relying on a Blueprint sync against a
+# manually-created service.
+staticSites:
+  - name: mama-ai-pwa
+    rootDir: apps/mobile-pwa
+    buildCommand: npm ci && npm run build
+    staticPublishPath: out
+    envVars:
+      # This service's own real URL, plus /api/v1 - e.g. https://mama-ai-api.onrender.com/api/v1
+      - key: NEXT_PUBLIC_API_URL
+        sync: false
