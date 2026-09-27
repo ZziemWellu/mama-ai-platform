@@ -1,9 +1,14 @@
-// Generates real Twi audio for the voice-assessment flow via GhanaNLP's Khaya TTS API
-// (https://developer.khaya.ai — confirmed request/response shape from the open-source
-// Ghana-NLP-Python-Library SDK, since the API docs portal is JS-rendered and not independently
-// verifiable here). This is a one-time/occasional content-generation step, not something the app
-// calls at runtime — the app is offline-first, so these files are generated once, committed, and
-// served as static assets the service worker precaches (see public/sw.js).
+// Generates real Twi audio for the voice-assessment flow via GhanaNLP's Khaya TTS API v2
+// (https://developer.khaya.ai). v1 is deprecated; this targets v2's POST /tts/v2/synthesize,
+// confirmed against the live API reference page (Ocp-Apim-Subscription-Key header, JSON body,
+// binary audio response) plus the GhanaNLP-published Claude skill for language/speaker_id shape.
+// This is a one-time/occasional content-generation step, not something the app calls at runtime —
+// the app is offline-first, so these files are generated once, committed, and served as static
+// assets the service worker precaches (see public/sw.js).
+//
+// Language code confirmed against the portal's "Get list of all supported languages" operation:
+// "twi" is Asante Twi (ISO 639-3) — the majority Twi dialect and closest fit for a general-Ghana
+// audience. "atw" (Akuapem Twi) is the other dialect Khaya exposes, not used here.
 //
 // Usage: KHAYA_API_KEY=... node scripts/generate-twi-audio.mjs
 //
@@ -26,18 +31,25 @@ if (!API_KEY) {
   process.exit(1);
 }
 
+const LANGUAGE_CODE = "twi";
+
 const phrases = JSON.parse(readFileSync(PHRASES_PATH, "utf-8"));
 mkdirSync(OUT_DIR, { recursive: true });
 
 async function synthesize({ id, en }) {
-  const res = await fetch("https://translation-api.ghananlp.org/tts/v1/tts", {
+  const res = await fetch("https://translation-api.ghananlp.org/tts/v2/synthesize", {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
       "Cache-Control": "no-cache",
       "Ocp-Apim-Subscription-Key": API_KEY,
     },
-    body: JSON.stringify({ text: en, language: "tw" }),
+    body: JSON.stringify({
+      text: en,
+      language: LANGUAGE_CODE,
+      speaker_id: "female",
+      format: "mp3",
+    }),
   });
 
   if (!res.ok) {
