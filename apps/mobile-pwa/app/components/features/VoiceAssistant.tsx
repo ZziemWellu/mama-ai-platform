@@ -1,7 +1,11 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Mic, MicOff, Volume2, VolumeX, AlertCircle, CheckCircle, Loader2 } from 'lucide-react'
+import { Mic, MicOff, Volume2, VolumeX, AlertCircle, CheckCircle, Loader2, Languages } from 'lucide-react'
+import { assessRisk, ApiError } from '../../lib/api'
+import { assessOffline } from '../../lib/offlineRiskRules'
+import { enqueue } from '../../lib/offlineQueue'
+import RiskExplanation from '../RiskExplanation'
 
 interface VoiceAssistantProps {
   onAssessmentComplete?: (data: any) => void
@@ -14,32 +18,62 @@ declare global {
   }
 }
 
+type Lang = 'en' | 'tw'
+
+// Twi audio prompts are pre-generated (see scripts/generate-twi-audio.mjs) — browsers have no Twi
+// speech *recognition*, only synthesis works reliably here, so Twi mode plays a real recorded/
+// synthesized question and takes the answer as a tap instead of trying to transcribe spoken Twi.
+// This also means every question needs a tap control, not free text — see `control` below.
+//
+// Each id matches shared/voice-assessment-phrases.json exactly, which is what
+// scripts/generate-twi-audio.mjs reads to generate public/audio/tw/{id}.mp3.
+const QUESTIONS: Array<{
+  id: string
+  en: string
+  field: string
+  control: 'choice' | 'yesno' | 'severity' | 'number' | 'bp'
+  choices?: { label: string; value: number }[]
+}> = [
+  { id: 'bleeding', en: 'Is the mother bleeding? Choose none, light, heavy, or very heavy.', field: 'bleeding_volume', control: 'choice', choices: [
+    { label: 'None', value: 0 }, { label: 'Light', value: 300 }, { label: 'Heavy', value: 600 }, { label: 'Very heavy', value: 1000 },
+  ] },
+  { id: 'conscious', en: 'Is she conscious and responsive?', field: 'conscious', control: 'yesno' },
+  { id: 'blood_pressure', en: 'What is her blood pressure? Enter the top number, then the bottom number.', field: 'bp', control: 'bp' },
+  { id: 'headache', en: 'How severe is her headache? Choose none, mild, moderate, or severe.', field: 'headache_severity', control: 'severity' },
+  { id: 'visual_changes', en: 'Are there any visual changes or blurred vision?', field: 'visual_changes', control: 'yesno' },
+  // The two questions below didn't exist before — without them, this flow could only ever surface
+  // PPH or pre-eclampsia, never the other two real hard rules (obstructed labour needs abdominal
+  // pain severity, sepsis needs foul discharge) that assessments.py already checks for.
+  { id: 'abdominal_pain', en: 'How severe is her abdominal pain? Choose none, mild, moderate, or severe.', field: 'abdominal_pain_severity', control: 'severity' },
+  { id: 'foul_discharge', en: 'Is there any foul-smelling discharge?', field: 'foul_discharge', control: 'yesno' },
+  { id: 'fever', en: 'Does she have a fever?', field: 'fever', control: 'yesno' },
+  { id: 'labour_hours', en: 'How many hours has she been in labour? Enter the number of hours.', field: 'labour_hours', control: 'number' },
+  { id: 'previous_csection', en: 'Has she had a previous caesarean section?', field: 'previous_csection', control: 'yesno' },
+]
+
+const SEVERITY_CHOICES = [
+  { label: 'None', value: 0 }, { label: 'Mild', value: 3 }, { label: 'Moderate', value: 6 }, { label: 'Severe', value: 9 },
+]
+
 export default function VoiceAssistant({ onAssessmentComplete }: VoiceAssistantProps) {
+  const [lang, setLang] = useState<Lang>('en')
   const [isListening, setIsListening] = useState(false)
   const [isSpeaking, setIsSpeaking] = useState(false)
   const [transcript, setTranscript] = useState('')
-  const [response, setResponse] = useState('')
   const [currentStep, setCurrentStep] = useState(0)
   const [assessmentData, setAssessmentData] = useState<any>({})
   const [isProcessing, setIsProcessing] = useState(false)
   const [isSpeechSupported, setIsSpeechSupported] = useState(true)
+  const [bpDraft, setBpDraft] = useState({ systolic: '', diastolic: '' })
+  const [numberDraft, setNumberDraft] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [result, setResult] = useState<any>(null)
 
   const recognitionRef = useRef<any>(null)
   const synthesisRef = useRef<SpeechSynthesis | null>(null)
-
-  const questions = [
-    { id: 'bleeding', question: "Is the mother bleeding? If yes, how much? (none, light, heavy, very heavy)", field: 'bleeding_volume' },
-    { id: 'conscious', question: "Is she conscious and responsive?", field: 'conscious' },
-    { id: 'bp', question: "What is her blood pressure? (systolic over diastolic)", field: 'bp' },
-    { id: 'headache', question: "Does she have a severe headache?", field: 'headache' },
-    { id: 'visual', question: "Are there any visual changes or blurred vision?", field: 'visual_changes' },
-    { id: 'fever', question: "Does she have a fever?", field: 'fever' },
-    { id: 'labour', question: "How long has she been in labour? (in hours)", field: 'labour_hours' },
-    { id: 'previous', question: "Has she had a previous C-section?", field: 'previous_csection' }
-  ]
+  const audioRef = useRef<HTMLAudioElement | null>(null)
 
   useEffect(() => {
-    // Check if speech recognition is supported
     const isSupported = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window
     setIsSpeechSupported(isSupported)
 
@@ -60,42 +94,44 @@ export default function VoiceAssistant({ onAssessmentComplete }: VoiceAssistantP
       recognitionRef.current.onend = () => {
         setIsListening(false)
         if (transcript) {
-          processResponse(transcript)
+          processEnglishTranscript(transcript)
         }
       }
     }
 
-    // Initialize speech synthesis
     if (typeof window !== 'undefined') {
       synthesisRef.current = window.speechSynthesis
+      audioRef.current = new Audio()
+      audioRef.current.onplay = () => setIsSpeaking(true)
+      audioRef.current.onended = () => setIsSpeaking(false)
+      audioRef.current.onerror = () => setIsSpeaking(false)
     }
 
-    // Start with introduction
-    setTimeout(() => {
-      if (isSupported) {
-        speakText("Welcome to MAMA-AI Voice Assistant. I'll guide you through the emergency assessment. Let's begin.")
-      }
-    }, 1000)
+    setTimeout(() => speak('welcome', "Welcome to MAMA-AI. I will guide you through the emergency assessment. Let's begin."), 1000)
 
     return () => {
       if (recognitionRef.current) {
-        try {
-          recognitionRef.current.abort()
-        } catch (e) {
-          // Ignore abort errors
-        }
+        try { recognitionRef.current.abort() } catch {}
       }
-      if (synthesisRef.current) {
-        synthesisRef.current.cancel()
-      }
+      synthesisRef.current?.cancel()
+      audioRef.current?.pause()
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
-  const speakText = (text: string) => {
+  // English: browser TTS (works fine, always has). Twi: a real pre-generated audio file — browsers
+  // cannot synthesize Twi themselves. Falls back to a text banner if the file is missing/unplayable
+  // rather than silently doing nothing.
+  const speak = (id: string, enText: string) => {
+    if (lang === 'tw' && audioRef.current) {
+      audioRef.current.src = `/audio/tw/${id}.mp3`
+      audioRef.current.play().catch(() => setIsSpeaking(false))
+      return
+    }
     if (!synthesisRef.current) return
     try {
       synthesisRef.current.cancel()
-      const utterance = new SpeechSynthesisUtterance(text)
+      const utterance = new SpeechSynthesisUtterance(enText)
       utterance.lang = 'en-US'
       utterance.rate = 0.9
       utterance.onstart = () => setIsSpeaking(true)
@@ -107,18 +143,23 @@ export default function VoiceAssistant({ onAssessmentComplete }: VoiceAssistantP
     }
   }
 
+  useEffect(() => {
+    if (currentStep < QUESTIONS.length) {
+      const q = QUESTIONS[currentStep]
+      speak(q.id, q.en)
+      setBpDraft({ systolic: '', diastolic: '' })
+      setNumberDraft('')
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentStep, lang])
+
   const toggleListening = () => {
     if (!isSpeechSupported) {
       alert('Speech recognition is not supported in this browser. Please use Chrome or Edge.')
       return
     }
-
     if (isListening) {
-      try {
-        recognitionRef.current?.stop()
-      } catch (e) {
-        // Ignore stop errors
-      }
+      try { recognitionRef.current?.stop() } catch {}
       setIsListening(false)
     } else {
       setTranscript('')
@@ -132,143 +173,168 @@ export default function VoiceAssistant({ onAssessmentComplete }: VoiceAssistantP
     }
   }
 
-  const processResponse = (text: string) => {
+  const processEnglishTranscript = (text: string) => {
     setIsProcessing(true)
-    
-    const question = questions[currentStep]
-    if (!question) {
-      setIsProcessing(false)
-      return
-    }
+    const question = QUESTIONS[currentStep]
+    if (!question) { setIsProcessing(false); return }
 
-    let value: any = text.toLowerCase().trim()
-    
-    switch (question.field) {
-      case 'bleeding_volume':
-        if (value.includes('none') || value.includes('no')) value = 0
-        else if (value.includes('heavy') || value.includes('600')) value = 600
-        else if (value.includes('light')) value = 300
-        else if (value.includes('very heavy') || value.includes('1000')) value = 1000
-        else value = parseInt(value) || 0
+    const value = text.toLowerCase().trim()
+    let parsed: any
+    switch (question.control) {
+      case 'choice':
+        if (value.includes('very heavy') || value.includes('1000')) parsed = 1000
+        else if (value.includes('heavy') || value.includes('600')) parsed = 600
+        else if (value.includes('light')) parsed = 300
+        else if (value.includes('none') || value.includes('no')) parsed = 0
+        else parsed = parseInt(value) || 0
         break
-      case 'conscious':
-        value = value.includes('yes') || value.includes('conscious') || value.includes('awake')
+      case 'severity':
+        if (value.includes('severe')) parsed = 9
+        else if (value.includes('moderate')) parsed = 6
+        else if (value.includes('mild')) parsed = 3
+        else parsed = 0
         break
-      case 'bp':
+      case 'yesno':
+        parsed = value.includes('yes') || value.includes('yeah')
+        break
+      case 'bp': {
         const bpMatch = text.match(/(\d+)\s*\/\s*(\d+)/)
-        if (bpMatch) {
-          value = { systolic: parseInt(bpMatch[1]), diastolic: parseInt(bpMatch[2]) }
-        } else {
-          const numbers = text.match(/\d+/g)
-          if (numbers && numbers.length >= 2) {
-            value = { systolic: parseInt(numbers[0]), diastolic: parseInt(numbers[1]) }
-          } else {
-            value = { systolic: 120, diastolic: 80 }
-          }
-        }
+        const numbers = text.match(/\d+/g)
+        if (bpMatch) parsed = { systolic: parseInt(bpMatch[1]), diastolic: parseInt(bpMatch[2]) }
+        else if (numbers && numbers.length >= 2) parsed = { systolic: parseInt(numbers[0]), diastolic: parseInt(numbers[1]) }
+        else parsed = { systolic: 120, diastolic: 80 }
         break
-      case 'headache':
-        value = value.includes('yes') || value.includes('severe')
-        break
-      case 'visual_changes':
-        value = value.includes('yes') || value.includes('blurred') || value.includes('visual')
-        break
-      case 'fever':
-        value = value.includes('yes') || value.includes('fever') || value.includes('hot')
-        break
-      case 'labour_hours':
-        value = parseInt(value) || 0
-        break
-      case 'previous_csection':
-        value = value.includes('yes') || value.includes('previous')
+      }
+      case 'number':
+        parsed = parseInt(value) || 0
         break
     }
+    recordAnswer(question, parsed)
+    setIsProcessing(false)
+  }
 
-    setAssessmentData((prev: any) => ({
-      ...prev,
-      [question.field]: value,
-      [`${question.field}_text`]: text
-    }))
-
+  const recordAnswer = (question: (typeof QUESTIONS)[number], value: any) => {
+    setAssessmentData((prev: any) => ({ ...prev, [question.field]: value }))
     const nextStep = currentStep + 1
-    if (nextStep < questions.length) {
+    if (nextStep < QUESTIONS.length) {
       setCurrentStep(nextStep)
-      const nextQuestion = questions[nextStep]
-      setTimeout(() => {
-        speakText(nextQuestion.question)
-        setIsProcessing(false)
-      }, 500)
     } else {
       setTimeout(() => {
-        speakText("Assessment complete. Processing your results...")
-        setIsProcessing(false)
-        completeAssessment()
-      }, 500)
+        speak('complete', 'Assessment complete. Processing your results.')
+        completeAssessment({ ...assessmentData, [question.field]: value })
+      }, 300)
     }
   }
 
-  const completeAssessment = () => {
+  const completeAssessment = async (data: any) => {
     const patientData = {
       patient_id: `P${Date.now().toString().slice(-4)}`,
       symptoms: {
-        bleeding_volume: assessmentData.bleeding_volume || 0,
-        headache_severity: assessmentData.headache ? 8 : 0,
-        visual_changes: assessmentData.visual_changes || false,
-        abdominal_pain_severity: 0,
-        foul_discharge: false,
-        fever: assessmentData.fever || false
+        bleeding_volume: data.bleeding_volume || 0,
+        headache_severity: data.headache_severity || 0,
+        visual_changes: !!data.visual_changes,
+        abdominal_pain_severity: data.abdominal_pain_severity || 0,
+        foul_discharge: !!data.foul_discharge,
+        fever: !!data.fever,
       },
       vitals: {
-        systolic_bp: assessmentData.bp?.systolic || 120,
-        diastolic_bp: assessmentData.bp?.diastolic || 80,
-        temperature: 36.8
+        systolic_bp: data.bp?.systolic || 120,
+        diastolic_bp: data.bp?.diastolic || 80,
+        temperature: 36.8,
       },
       obstetric_history: {
         gestation_weeks: 38,
-        labour_hours: assessmentData.labour_hours || 0,
-        previous_csection: assessmentData.previous_csection || false,
-        multiple_pregnancy: false
+        labour_hours: data.labour_hours || 0,
+        previous_csection: !!data.previous_csection,
+        multiple_pregnancy: false,
+      },
+    }
+
+    onAssessmentComplete?.(patientData)
+
+    // This used to stop at the callback above, which nothing ever actually provided (VoiceAssistant
+    // is rendered with no onAssessmentComplete prop in page.tsx) — completing the flow submitted
+    // nowhere. Submits for real now, with the same real/offline fallback as the manual assessment
+    // form (see app/assessment/page.tsx).
+    setSubmitting(true)
+    try {
+      const apiResult = await assessRisk(patientData)
+      setResult(apiResult)
+    } catch (error) {
+      if (error instanceof ApiError) {
+        setResult({ error: error.message })
+      } else {
+        setResult({ ...assessOffline(patientData), assessment_id: null, shap_summary: {}, referral_options: [] })
+        await enqueue('assessment', patientData)
       }
+    } finally {
+      setSubmitting(false)
     }
-
-    if (onAssessmentComplete) {
-      onAssessmentComplete(patientData)
-    }
-
-    setResponse("Assessment complete! I've recorded all your responses. Redirecting to results...")
-    speakText("Assessment complete. Redirecting to results.")
   }
 
-  const getProgress = () => {
-    return Math.round((currentStep / questions.length) * 100)
-  }
+  const getProgress = () => Math.round((currentStep / QUESTIONS.length) * 100)
+  const question = QUESTIONS[currentStep]
+  const done = currentStep >= QUESTIONS.length
 
-  if (!isSpeechSupported) {
-    return (
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-        <div className="flex items-center gap-2 mb-4">
-          <div className="w-10 h-10 rounded-xl bg-gray-200 flex items-center justify-center">
-            <Volume2 className="w-5 h-5 text-gray-400" />
+  const renderTapControl = () => {
+    if (!question) return null
+    switch (question.control) {
+      case 'choice':
+        return (
+          <div className="grid grid-cols-2 gap-2">
+            {question.choices!.map((c) => (
+              <button key={c.label} onClick={() => recordAnswer(question, c.value)} className="py-3 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-800 font-medium text-sm">
+                {c.label}
+              </button>
+            ))}
           </div>
-          <div>
-            <h3 className="font-semibold text-gray-800">Voice Assistant</h3>
-            <p className="text-xs text-gray-500">Speech recognition not supported</p>
+        )
+      case 'severity':
+        return (
+          <div className="grid grid-cols-2 gap-2">
+            {SEVERITY_CHOICES.map((c) => (
+              <button key={c.label} onClick={() => recordAnswer(question, c.value)} className="py-3 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-800 font-medium text-sm">
+                {c.label}
+              </button>
+            ))}
           </div>
-        </div>
-        <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-          <p className="text-sm text-amber-700">
-            ⚠️ Voice Assistant is not supported in this browser. 
-            Please use Chrome or Edge for voice features, or use the manual assessment form.
-          </p>
-          <a 
-            href="/assessment" 
-            className="mt-3 inline-block bg-teal-600 text-white px-4 py-2 rounded-lg text-sm hover:bg-teal-700 transition"
-          >
-            Go to Manual Assessment →
-          </a>
-        </div>
-      </div>
-    )
+        )
+      case 'yesno':
+        return (
+          <div className="grid grid-cols-2 gap-2">
+            <button onClick={() => recordAnswer(question, true)} className="py-3 rounded-xl bg-red-50 hover:bg-red-100 text-red-800 font-medium">Yes</button>
+            <button onClick={() => recordAnswer(question, false)} className="py-3 rounded-xl bg-green-50 hover:bg-green-100 text-green-800 font-medium">No</button>
+          </div>
+        )
+      case 'number':
+        return (
+          <div className="flex gap-2">
+            <input
+              type="number" inputMode="numeric" value={numberDraft} onChange={(e) => setNumberDraft(e.target.value)}
+              className="flex-1 border border-gray-200 rounded-xl px-3 py-2 text-sm outline-none" placeholder="Number of hours"
+            />
+            <button onClick={() => recordAnswer(question, parseInt(numberDraft) || 0)} className="px-4 py-2 rounded-xl bg-purple-600 text-white text-sm font-medium">Next</button>
+          </div>
+        )
+      case 'bp':
+        return (
+          <div className="flex gap-2 items-center">
+            <input
+              type="number" inputMode="numeric" value={bpDraft.systolic} onChange={(e) => setBpDraft((p) => ({ ...p, systolic: e.target.value }))}
+              className="w-20 border border-gray-200 rounded-xl px-2 py-2 text-sm outline-none" placeholder="Top"
+            />
+            <span className="text-gray-400">/</span>
+            <input
+              type="number" inputMode="numeric" value={bpDraft.diastolic} onChange={(e) => setBpDraft((p) => ({ ...p, diastolic: e.target.value }))}
+              className="w-20 border border-gray-200 rounded-xl px-2 py-2 text-sm outline-none" placeholder="Bottom"
+            />
+            <button
+              onClick={() => recordAnswer(question, { systolic: parseInt(bpDraft.systolic) || 120, diastolic: parseInt(bpDraft.diastolic) || 80 })}
+              className="flex-1 py-2 rounded-xl bg-purple-600 text-white text-sm font-medium"
+            >Next</button>
+          </div>
+        )
+    }
   }
 
   return (
@@ -284,11 +350,13 @@ export default function VoiceAssistant({ onAssessmentComplete }: VoiceAssistantP
           </div>
         </div>
         <div className="flex items-center gap-2">
-          {isListening && (
-            <span className="flex items-center gap-1 text-xs bg-red-100 text-red-700 px-3 py-1 rounded-full animate-pulse">
-              <Mic className="w-3 h-3" /> Listening
-            </span>
-          )}
+          <button
+            onClick={() => { setLang((l) => (l === 'en' ? 'tw' : 'en')); setCurrentStep(0); setAssessmentData({}) }}
+            className="flex items-center gap-1 text-xs bg-gray-100 hover:bg-gray-200 px-3 py-1.5 rounded-full font-medium text-gray-700"
+            title="Switch language (restarts the assessment)"
+          >
+            <Languages className="w-3 h-3" /> {lang === 'en' ? 'English' : 'Twi'}
+          </button>
           {isSpeaking && (
             <span className="flex items-center gap-1 text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full">
               <Volume2 className="w-3 h-3" /> Speaking
@@ -297,29 +365,58 @@ export default function VoiceAssistant({ onAssessmentComplete }: VoiceAssistantP
         </div>
       </div>
 
+      {lang === 'tw' && (
+        <div className="bg-amber-50 border border-amber-100 rounded-xl p-3 mb-4 text-xs text-amber-800">
+          Twi audio is machine-generated (not a human recording) — pronunciation may be imperfect.
+          Answer each question by tapping a choice below; free speech input isn't available in Twi.
+        </div>
+      )}
+
       <div className="mb-4">
         <div className="flex justify-between text-xs text-gray-500 mb-1">
           <span>Assessment Progress</span>
           <span>{getProgress()}%</span>
         </div>
         <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-          <div
-            className="h-full bg-gradient-to-r from-purple-500 to-purple-600 rounded-full transition-all duration-500"
-            style={{ width: `${getProgress()}%` }}
-          />
+          <div className="h-full bg-gradient-to-r from-purple-500 to-purple-600 rounded-full transition-all duration-500" style={{ width: `${getProgress()}%` }} />
         </div>
       </div>
 
       <div className="bg-purple-50 rounded-xl p-4 mb-4 min-h-[80px]">
-        {currentStep < questions.length ? (
+        {!done ? (
           <div>
-            <p className="text-xs text-purple-600 font-medium mb-1">Question {currentStep + 1} of {questions.length}</p>
-            <p className="text-gray-800 font-medium">{questions[currentStep].question}</p>
-            {transcript && (
-              <p className="text-sm text-gray-500 mt-2">
-                You said: "{transcript}"
-              </p>
+            <p className="text-xs text-purple-600 font-medium mb-1">Question {currentStep + 1} of {QUESTIONS.length}</p>
+            <p className="text-gray-800 font-medium mb-3">{question.en}</p>
+            <button onClick={() => speak(question.id, question.en)} disabled={isSpeaking} className="text-xs text-purple-600 underline mb-3 disabled:opacity-50">
+              🔊 Replay question
+            </button>
+            {lang === 'tw' ? (
+              renderTapControl()
+            ) : (
+              transcript && <p className="text-sm text-gray-500 mt-2">You said: "{transcript}"</p>
             )}
+          </div>
+        ) : submitting ? (
+          <div className="flex items-center gap-2 text-purple-700">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span className="font-medium">Assessing...</span>
+          </div>
+        ) : result?.error ? (
+          <div className="text-red-700 text-sm">{result.error}</div>
+        ) : result ? (
+          <div className="space-y-3">
+            {result.offline && (
+              <div className="bg-amber-100 border-2 border-amber-400 p-3 rounded-xl text-amber-800 text-xs font-semibold">
+                ⚠️ Offline estimate — not yet confirmed by the server. Queued to sync automatically once you're back online.
+              </div>
+            )}
+            <RiskExplanation
+              riskLevel={result.risk_level}
+              confidenceScore={result.confidence_score}
+              shapSummary={result.shap_summary || {}}
+              explanation={result.explanation || 'No explanation available'}
+              primaryCondition={result.primary_condition}
+            />
           </div>
         ) : (
           <div className="flex items-center gap-2 text-green-700">
@@ -329,79 +426,22 @@ export default function VoiceAssistant({ onAssessmentComplete }: VoiceAssistantP
         )}
       </div>
 
-      {response && (
-        <div className="bg-gray-50 rounded-xl p-3 mb-4 text-sm text-gray-700">
-          {response}
+      {lang === 'en' && !done && (
+        <div className="flex items-center gap-3">
+          <button
+            onClick={toggleListening}
+            disabled={isProcessing || isSpeaking}
+            className={`flex-1 py-3 rounded-xl text-white font-medium transition flex items-center justify-center gap-2 ${
+              isListening ? 'bg-red-600 hover:bg-red-700' : isProcessing || isSpeaking ? 'bg-gray-400 cursor-not-allowed' : 'bg-purple-600 hover:bg-purple-700'
+            }`}
+          >
+            {isListening ? (<><Mic className="w-5 h-5" /> Stop Listening</>) : isProcessing ? (<><Loader2 className="w-5 h-5 animate-spin" /> Processing...</>) : isSpeaking ? (<><Volume2 className="w-5 h-5" /> Speaking...</>) : (<><Mic className="w-5 h-5" /> Speak Now</>)}
+          </button>
+          {!isSpeechSupported && (
+            <div className="flex items-center gap-1 text-xs text-amber-700"><AlertCircle className="w-4 h-4" /> Not supported in this browser</div>
+          )}
         </div>
       )}
-
-      <div className="flex items-center gap-3">
-        <button
-          onClick={toggleListening}
-          disabled={isProcessing || isSpeaking}
-          className={`flex-1 py-3 rounded-xl text-white font-medium transition flex items-center justify-center gap-2 ${
-            isListening 
-              ? 'bg-red-600 hover:bg-red-700' 
-              : isProcessing || isSpeaking
-                ? 'bg-gray-400 cursor-not-allowed'
-                : 'bg-purple-600 hover:bg-purple-700'
-          }`}
-        >
-          {isListening ? (
-            <>
-              <Mic className="w-5 h-5" /> Stop Listening
-            </>
-          ) : isProcessing ? (
-            <>
-              <Loader2 className="w-5 h-5 animate-spin" /> Processing...
-            </>
-          ) : isSpeaking ? (
-            <>
-              <Volume2 className="w-5 h-5" /> Speaking...
-            </>
-          ) : (
-            <>
-              <Mic className="w-5 h-5" /> Speak Now
-            </>
-          )}
-        </button>
-
-        <button
-          onClick={() => {
-            if (currentStep < questions.length) {
-              speakText(questions[currentStep].question)
-            }
-          }}
-          disabled={isSpeaking || isProcessing}
-          className="p-3 rounded-xl bg-gray-100 hover:bg-gray-200 transition disabled:opacity-50"
-          title="Repeat question"
-        >
-          <Volume2 className="w-5 h-5 text-gray-600" />
-        </button>
-
-        <button
-          onClick={() => {
-            if (synthesisRef.current) {
-              synthesisRef.current.cancel()
-              setIsSpeaking(false)
-            }
-          }}
-          className="p-3 rounded-xl bg-gray-100 hover:bg-gray-200 transition"
-          title="Stop speaking"
-        >
-          <VolumeX className="w-5 h-5 text-gray-600" />
-        </button>
-      </div>
-
-      <div className="mt-3 flex items-center gap-2 text-xs text-gray-400">
-        <span className={`w-2 h-2 rounded-full ${isListening ? 'bg-red-500 animate-pulse' : isSpeaking ? 'bg-blue-500' : 'bg-gray-300'}`} />
-        <span>
-          {isListening ? 'Listening...' : 
-           isSpeaking ? 'Speaking...' : 
-           isProcessing ? 'Processing...' :
-           'Ready — click "Speak Now" to start'}
-        </span>
-      </div>
     </div>
   )
 }
