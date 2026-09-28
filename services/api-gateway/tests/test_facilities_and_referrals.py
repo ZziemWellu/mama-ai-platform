@@ -96,3 +96,70 @@ def test_referral_with_no_facilities_at_all_says_so_honestly_instead_of_faking_o
     body = res.json()
     assert body["destination_facility"] is None
     assert "No facility found" in body["referral_note"]
+
+
+def _make_patient_and_assessment(code, condition="PPH"):
+    from app.models import RiskAssessment
+    db = SessionLocal()
+    patient = Patient(id=uuid.uuid4(), patient_code=code, gestation_weeks=38)
+    db.add(patient)
+    db.commit()
+    assessment = RiskAssessment(id=uuid.uuid4(), patient_id=patient.id, risk_level="CRITICAL", primary_condition=condition)
+    db.add(assessment)
+    db.commit()
+    ids = (str(patient.id), str(assessment.id))
+    db.close()
+    return ids
+
+
+def test_referral_from_an_assessment_records_that_assessment_as_referred(client, auth_headers, make_facility):
+    from app.models import RiskAssessment
+    headers, _ = auth_headers(role="ADMIN")
+    near_id = make_facility("Near Clinic", latitude=ACCRA[0], longitude=ACCRA[1], has_maternity=True)
+    patient_id, assessment_id = _make_patient_and_assessment("RP003")
+
+    res = client.post("/api/v1/referrals/recommend", json={
+        "patient_id": patient_id, "assessment_id": assessment_id, "current_latitude": ACCRA[0], "current_longitude": ACCRA[1],
+        "gestation_weeks": 38, "risk_level": "CRITICAL", "primary_condition": "PPH",
+    }, headers=headers)
+    assert res.status_code == 200, res.text
+
+    db = SessionLocal()
+    assessment = db.query(RiskAssessment).filter(RiskAssessment.id == uuid.UUID(assessment_id)).first()
+    assert assessment.referral_initiated is True
+    assert str(assessment.referral_facility_id) == near_id
+    db.close()
+
+
+def test_referral_rejects_an_assessment_belonging_to_a_different_patient(client, auth_headers, make_facility):
+    headers, _ = auth_headers(role="ADMIN")
+    make_facility("Near Clinic", latitude=ACCRA[0], longitude=ACCRA[1], has_maternity=True)
+    patient_id, _ = _make_patient_and_assessment("RP004")
+    _, other_assessment_id = _make_patient_and_assessment("RP005")
+
+    res = client.post("/api/v1/referrals/recommend", json={
+        "patient_id": patient_id, "assessment_id": other_assessment_id, "current_latitude": ACCRA[0], "current_longitude": ACCRA[1],
+        "gestation_weeks": 38, "risk_level": "CRITICAL", "primary_condition": "PPH",
+    }, headers=headers)
+    assert res.status_code == 404
+
+
+def test_referral_accepts_a_patient_code_not_just_a_uuid(client, auth_headers, make_facility):
+    headers, _ = auth_headers(role="ADMIN")
+    make_facility("Near Clinic", latitude=ACCRA[0], longitude=ACCRA[1], has_maternity=True)
+    _make_patient_and_assessment("P004")
+
+    res = client.post("/api/v1/referrals/recommend", json={
+        "patient_id": "P004", "current_latitude": ACCRA[0], "current_longitude": ACCRA[1],
+        "gestation_weeks": 38, "risk_level": "CRITICAL", "primary_condition": "PPH",
+    }, headers=headers)
+    assert res.status_code == 200, res.text
+
+
+def test_referral_for_an_unknown_patient_code_is_a_404_not_a_500(client, auth_headers):
+    headers, _ = auth_headers(role="ADMIN")
+    res = client.post("/api/v1/referrals/recommend", json={
+        "patient_id": "NOPE", "current_latitude": ACCRA[0], "current_longitude": ACCRA[1],
+        "gestation_weeks": 38, "risk_level": "CRITICAL", "primary_condition": "PPH",
+    }, headers=headers)
+    assert res.status_code == 404

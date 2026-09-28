@@ -316,6 +316,26 @@ function AssessmentContent() {
                   explanation={result.explanation || "No explanation available"}
                   primaryCondition={result.primary_condition}
                 />
+                {/* Only a server-confirmed assessment can be referred on — an offline estimate has no
+                    assessment_id yet, and the referral is what gets recorded against it. */}
+                {result.assessment_id && ["HIGH", "CRITICAL"].includes(result.risk_level) && (
+                  <button
+                    onClick={() => {
+                      const params = new URLSearchParams({
+                        patient_id: result.patient_id,
+                        assessment_id: result.assessment_id,
+                        risk_level: result.risk_level,
+                        primary_condition: result.primary_condition,
+                        gestation_weeks: String(formData.obstetric_history.gestation_weeks),
+                      });
+                      router.push(`/referral?${params.toString()}`);
+                    }}
+                    className="w-full bg-red-600 hover:bg-red-700 text-white font-semibold py-3 rounded-xl flex items-center justify-center gap-2 transition"
+                  >
+                    <MapPin className="w-5 h-5" />
+                    Refer this patient
+                  </button>
+                )}
               </div>
             )
           ) : (

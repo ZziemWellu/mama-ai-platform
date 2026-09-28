@@ -1,25 +1,16 @@
 "use client";
 
-import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, Wallet, Heart, Activity, TrendingUp, Award, Building2, CheckCircle } from "lucide-react";
-import { getEconomicsDashboard } from "../lib/api";
+import { ArrowLeft, TrendingUp } from "lucide-react";
+import EnhancedEconomics from "../components/EnhancedEconomics";
 import { useRequireAuth } from "../lib/useRequireAuth";
 
+// Same component as the home screen's Economics tab, so the two can never disagree about the same data.
 export default function DashboardPage() {
   const router = useRouter();
   const { ready } = useRequireAuth();
-  const [stats, setStats] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (!ready) return;
-    getEconomicsDashboard()
-      .then((data) => setStats(data))
-      .finally(() => setLoading(false));
-  }, [ready]);
-
-  if (!ready || loading) {
+  if (!ready) {
     return (
       <div className="min-h-screen bg-slate-100 flex items-center justify-center">
         <div className="text-center">
@@ -29,13 +20,6 @@ export default function DashboardPage() {
       </div>
     );
   }
-
-  const cards = [
-    { icon: Wallet, label: "Cost Savings", value: `GHS ${stats?.total_cost_savings_ghs?.toLocaleString() || 0}`, color: "bg-green-50 text-green-700 border-green-200" },
-    { icon: Heart, label: "DALYs Averted", value: stats?.total_dalys_averted?.toFixed(1) || 0, color: "bg-purple-50 text-purple-700 border-purple-200" },
-    { icon: Activity, label: "High Risk Cases", value: stats?.high_risk_cases || 0, color: "bg-red-50 text-red-700 border-red-200" },
-    { icon: TrendingUp, label: "Referrals", value: stats?.successful_referrals || 0, color: "bg-blue-50 text-blue-700 border-blue-200" },
-  ];
 
   return (
     <div className="min-h-screen bg-slate-100">
@@ -48,81 +32,11 @@ export default function DashboardPage() {
             <TrendingUp className="w-5 h-5 text-teal-600" />
             <h1 className="text-xl font-bold text-gray-800">Dashboard</h1>
           </div>
-          <span className="ml-auto text-xs bg-green-100 text-green-700 px-3 py-1 rounded-full font-medium">🟢 Live</span>
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto p-4 space-y-6">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          {cards.map((card, index) => {
-            const Icon = card.icon;
-            return (
-              <div key={index} className={`p-6 rounded-2xl border ${card.color} shadow-sm`}>
-                <div className="flex items-center gap-2">
-                  <Icon className="w-5 h-5" />
-                  <p className="text-sm font-medium">{card.label}</p>
-                </div>
-                <p className="text-3xl font-bold mt-2">{card.value}</p>
-              </div>
-            );
-          })}
-        </div>
-
-        {stats?.average_icer_usd_per_daly != null && (
-          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-            <div className="flex items-center gap-2">
-              <Award className="w-5 h-5 text-indigo-600" />
-              <h3 className="font-semibold text-gray-700">Cost-Effectiveness (ICER)</h3>
-            </div>
-            <p className="text-3xl font-bold text-indigo-700 mt-2">
-              USD {stats.average_icer_usd_per_daly.toFixed(2)} / DALY
-            </p>
-            <p className="text-sm text-gray-500 mt-1">
-              {stats.average_icer_usd_per_daly < 2200
-                ? "✅ Cost-effective (below GDP per capita threshold)"
-                : "⚠️ Above GDP per capita threshold"}
-            </p>
-          </div>
-        )}
-
-        {stats?.by_facility && stats.by_facility.length > 0 && (
-          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-            <div className="flex items-center gap-2 mb-4">
-              <Building2 className="w-5 h-5 text-blue-600" />
-              <h3 className="font-semibold text-gray-700">Facility Breakdown</h3>
-            </div>
-            <div className="space-y-2">
-              {stats.by_facility.map((facility: any, i: number) => (
-                <div key={i} className="flex justify-between items-center border-b py-3">
-                  <div>
-                    <p className="font-medium text-gray-800">{facility.facility_name}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold text-green-600">GHS {facility.cost_savings.toLocaleString()}</p>
-                    <p className="text-xs text-gray-400">{facility.dalys_averted.toFixed(1)} DALYs</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {stats?.conditions_breakdown && stats.conditions_breakdown.length > 0 && (
-          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm">
-            <div className="flex items-center gap-2 mb-4">
-              <CheckCircle className="w-5 h-5 text-teal-600" />
-              <h3 className="font-semibold text-gray-700">Conditions Breakdown</h3>
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {stats.conditions_breakdown.map((cond: any, i: number) => (
-                <div key={i} className="bg-gray-50 px-4 py-2 rounded-xl border">
-                  <span className="font-medium text-gray-700">{cond.condition}</span>
-                  <span className="ml-2 text-sm text-gray-500">{cond.count} cases</span>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
+      <main className="max-w-6xl mx-auto p-4">
+        <EnhancedEconomics />
       </main>
     </div>
   );

@@ -7,7 +7,7 @@ from datetime import datetime
 from app.core.auth import get_current_user, require_same_facility_or_admin
 from app.core.database import get_db
 from app.core.geo import estimate_travel_minutes, haversine_km
-from app.models import ReferralEvent, Patient, Facility, User
+from app.models import ReferralEvent, Patient, Facility, RiskAssessment, User
 from app.schemas import ReferralRequest, ReferralResponse, FacilityOut
 
 router = APIRouter()
@@ -20,12 +20,17 @@ async def recommend_referral(request: ReferralRequest, db: Session = Depends(get
     ("Sort by distance (mock for MVP)") and fall back to one hardcoded facility with a placeholder
     phone number if the query came back empty.
     """
-    # Get patient
-    patient = db.query(Patient).filter(Patient.id == request.patient_id).first()
+    patient = _find_patient(db, request.patient_id)
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
     if patient.facility_id:
         require_same_facility_or_admin(current_user, patient.facility_id)
+
+    assessment = None
+    if request.assessment_id:
+        assessment = _find_assessment(db, request.assessment_id)
+        if not assessment or assessment.patient_id != patient.id:
+            raise HTTPException(status_code=404, detail="Assessment not found for this patient")
 
     # has_csection/has_ambulance aren't in the real seeded dataset (see seed_facilities.py) and
     # default to False (unknown), so they can't be used as a hard filter yet without excluding every
@@ -50,6 +55,9 @@ async def recommend_referral(request: ReferralRequest, db: Session = Depends(get
         referral_note=generate_referral_note(request, best, best_distance_km)
     )
     db.add(referral)
+    if assessment and best:
+        assessment.referral_initiated = True
+        assessment.referral_facility_id = best.id
     db.commit()
     db.refresh(referral)
 
@@ -59,6 +67,31 @@ async def recommend_referral(request: ReferralRequest, db: Session = Depends(get
         referral_note=generate_referral_note(request, best, best_distance_km),
         estimated_travel_minutes=travel_minutes or 0,
     )
+
+
+def _parse_uuid(value: str) -> Optional[uuid.UUID]:
+    try:
+        return uuid.UUID(value)
+    except (ValueError, TypeError):
+        return None
+
+
+def _find_patient(db: Session, patient_id: str) -> Optional[Patient]:
+    # Accepts the patient's UUID or their human-readable patient_code (e.g. "P004"), same as
+    # assessments do — comparing a non-UUID string against the UUID column used to fail as a 500.
+    patient_uuid = _parse_uuid(patient_id)
+    if patient_uuid:
+        patient = db.query(Patient).filter(Patient.id == patient_uuid).first()
+        if patient:
+            return patient
+    return db.query(Patient).filter(Patient.patient_code == patient_id).first()
+
+
+def _find_assessment(db: Session, assessment_id: str) -> Optional[RiskAssessment]:
+    assessment_uuid = _parse_uuid(assessment_id)
+    if not assessment_uuid:
+        return None
+    return db.query(RiskAssessment).filter(RiskAssessment.id == assessment_uuid).first()
 
 
 def _to_facility_out(f: Facility, request: "ReferralRequest", distance_km: Optional[float] = None) -> FacilityOut:
