@@ -106,6 +106,7 @@ async def assess_risk(request: AssessmentRequest, db: Session = Depends(get_db),
             
             return {
                 "assessment_id": str(assessment.id),
+                "patient_id": str(patient.id),
                 "risk_level": RiskLevel.CRITICAL.value,
                 "primary_condition": hard_risk["condition"].value,
                 "confidence_score": hard_risk["confidence_score"],
@@ -140,6 +141,7 @@ async def assess_risk(request: AssessmentRequest, db: Session = Depends(get_db),
         
         return {
             "assessment_id": str(assessment.id),
+            "patient_id": str(patient.id),
             "risk_level": RiskLevel.LOW.value,
             "primary_condition": PrimaryCondition.NORMAL.value,
             "confidence_score": 0.90,

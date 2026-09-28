@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session
 from typing import Optional
 
 from app.core.database import get_db
+from app.core.health_economics import CASE_FATALITY_SOURCE, case_fatality_rate
 from app.models import Facility, HealthEconomicsEvent, RiskAssessment
 from app.schemas import EconomicsResponse
 
@@ -42,6 +43,22 @@ async def get_economics_dashboard(
         entry["dalys_averted"] += float(event.dalys_averted_total or 0)
     by_facility = sorted(by_facility_map.values(), key=lambda f: f["cost_savings"], reverse=True)
 
+    referred = db.query(RiskAssessment.primary_condition).filter(RiskAssessment.referral_initiated == True).all()
+    condition_counts: dict[str, int] = {}
+    for (condition,) in referred:
+        condition_counts[condition or "UNKNOWN"] = condition_counts.get(condition or "UNKNOWN", 0) + 1
+    referrals_by_condition = sorted(
+        (
+            {"condition": condition, "count": count, "case_fatality_rate": case_fatality_rate(condition)}
+            for condition, count in condition_counts.items()
+        ),
+        key=lambda c: c["count"], reverse=True,
+    )
+    estimable = [c for c in referrals_by_condition if c["case_fatality_rate"] is not None]
+    expected_deaths_at_stake = (
+        round(sum(c["count"] * c["case_fatality_rate"] for c in estimable), 3) if estimable else None
+    )
+
     return EconomicsResponse(
         total_cost_savings_ghs=total_savings,
         total_dalys_averted=total_dalys,
@@ -49,4 +66,7 @@ async def get_economics_dashboard(
         high_risk_cases=high_risk_cases,
         successful_referrals=successful_referrals,
         by_facility=by_facility,
+        referrals_by_condition=referrals_by_condition,
+        expected_deaths_at_stake=expected_deaths_at_stake,
+        case_fatality_source=CASE_FATALITY_SOURCE,
     )

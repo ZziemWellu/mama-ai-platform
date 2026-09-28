@@ -1,26 +1,50 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeft, MapPin, Building2 } from "lucide-react";
 import { recommendReferral, ApiError } from "../lib/api";
 import { useRequireAuth } from "../lib/useRequireAuth";
 
-export default function ReferralPage() {
+// Used only when the device won't share its location — shown to the user as such, since ranking
+// facilities from the wrong starting point would recommend the wrong "nearest" one.
+const FALLBACK_LOCATION = { latitude: 7.3833, longitude: -1.3667, label: "Ejura area" };
+
+function ReferralContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { ready } = useRequireAuth();
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<any>(null);
+  const [locationSource, setLocationSource] = useState<"pending" | "device" | "fallback">("pending");
+  // Arriving from an assessment result pre-fills that patient and links the referral to the
+  // assessment (assessment_id), which is what records it as referred on the dashboard.
   const [formData, setFormData] = useState({
-    patient_id: "P004",
-    current_latitude: 7.3833,
-    current_longitude: -1.3667,
-    gestation_weeks: 39,
-    risk_level: "CRITICAL",
-    primary_condition: "PPH",
-    needs_csection: true,
+    patient_id: searchParams?.get("patient_id") ?? "",
+    assessment_id: searchParams?.get("assessment_id") ?? undefined,
+    current_latitude: FALLBACK_LOCATION.latitude,
+    current_longitude: FALLBACK_LOCATION.longitude,
+    gestation_weeks: Number(searchParams?.get("gestation_weeks") ?? 39),
+    risk_level: searchParams?.get("risk_level") ?? "CRITICAL",
+    primary_condition: searchParams?.get("primary_condition") ?? "PPH",
+    needs_csection: false,
     needs_icu: false,
   });
+
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setLocationSource("fallback");
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setFormData((f) => ({ ...f, current_latitude: pos.coords.latitude, current_longitude: pos.coords.longitude }));
+        setLocationSource("device");
+      },
+      () => setLocationSource("fallback"),
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  }, []);
 
   const handleReferral = async () => {
     setLoading(true);
@@ -119,9 +143,16 @@ export default function ReferralPage() {
             </div>
           </div>
 
+          <p className={`text-xs px-1 ${locationSource === "fallback" ? "text-amber-700" : "text-gray-500"}`}>
+            {locationSource === "pending" && "📍 Getting your location…"}
+            {locationSource === "device" && "📍 Using this device's current location"}
+            {locationSource === "fallback" &&
+              `⚠️ Location unavailable — ranking from the default ${FALLBACK_LOCATION.label}. Allow location access for an accurate nearest facility.`}
+          </p>
+
           <button
             onClick={handleReferral}
-            disabled={loading}
+            disabled={loading || !formData.patient_id}
             className={`w-full py-4 rounded-xl text-white font-semibold text-lg shadow-lg transition-all duration-200 flex items-center justify-center gap-2 ${
               loading ? "bg-gray-400" : "bg-blue-600 hover:bg-blue-700 hover:shadow-xl"
             }`}
@@ -146,7 +177,10 @@ export default function ReferralPage() {
                     <span>📍 {result.destination_facility.distance_km} km</span>
                     <span>⏱ {result.destination_facility.travel_minutes} min</span>
                   </div>
-                  <p className="mt-2 text-sm">📞 {result.destination_facility.phone}</p>
+                  <p className="mt-2 text-sm">📞 {result.destination_facility.phone ?? "Phone not on file"}</p>
+                  {formData.assessment_id && (
+                    <p className="mt-2 text-xs text-green-700 font-medium">✅ Referral recorded against this assessment</p>
+                  )}
                   {result.referral_note && (
                     <div className="mt-3">
                       <p className="font-semibold text-sm">📝 Referral Note:</p>
@@ -172,5 +206,17 @@ export default function ReferralPage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function ReferralPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-slate-100 flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600" />
+      </div>
+    }>
+      <ReferralContent />
+    </Suspense>
   );
 }

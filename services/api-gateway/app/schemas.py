@@ -97,6 +97,10 @@ class ReferralRequest(BaseModel):
     primary_condition: str
     needs_csection: bool = False
     needs_icu: bool = False
+    # The assessment this referral acts on. When given, that assessment is recorded as referred, which
+    # is what the economics dashboard counts — a referral made without one still works, it just can't
+    # be attributed to a specific assessed complication.
+    assessment_id: Optional[str] = None
 
 class ReferralResponse(BaseModel):
     destination_facility: Optional[FacilityOut]
@@ -136,6 +140,14 @@ class EconomicsResponse(BaseModel):
     high_risk_cases: int
     successful_referrals: int
     by_facility: List[Dict]
+    # Real counts of referred assessments per condition, each with its sourced case-fatality rate
+    # (None where no honestly matching rate exists — see app/core/health_economics.py).
+    referrals_by_condition: List[Dict] = []
+    # Sum of case-fatality rates across referred women: the expected maternal deaths those
+    # complications carry in West Africa. The risk that was referred on — not deaths averted.
+    # None when no referred case has a sourced rate.
+    expected_deaths_at_stake: Optional[float] = None
+    case_fatality_source: str = ""
 
 # ============ Patient Schemas ============
 

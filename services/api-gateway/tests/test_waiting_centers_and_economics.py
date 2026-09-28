@@ -92,3 +92,28 @@ def test_economics_dashboard_computes_real_numbers_from_real_events(client, auth
     assert body["high_risk_cases"] == 1
     assert body["successful_referrals"] == 1
     assert body["by_facility"] == [{"facility_name": "Real Facility", "cost_savings": 1000, "dalys_averted": 5.0}]
+
+
+def test_economics_reports_referrals_by_condition_with_only_sourced_case_fatality_rates(client, auth_headers):
+    headers, _ = auth_headers()
+    db = SessionLocal()
+    for condition in ["PPH", "PPH", "SEPSIS", "PRE_ECLAMPSIA"]:
+        db.add(RiskAssessment(id=uuid.uuid4(), risk_level="CRITICAL", primary_condition=condition, referral_initiated=True))
+    db.add(RiskAssessment(id=uuid.uuid4(), risk_level="CRITICAL", primary_condition="SEPSIS", referral_initiated=False))
+    db.commit()
+    db.close()
+
+    body = client.get("/api/v1/economics/dashboard", headers=headers).json()
+    by_condition = {c["condition"]: c for c in body["referrals_by_condition"]}
+    assert by_condition["PPH"]["count"] == 2
+    assert by_condition["SEPSIS"]["count"] == 1, "an unreferred assessment must not be counted"
+    assert by_condition["PRE_ECLAMPSIA"]["case_fatality_rate"] is None, "no honestly matching rate — never approximated"
+    assert body["expected_deaths_at_stake"] == round(2 * 0.019 + 0.333, 3)
+    assert "MOMA" in body["case_fatality_source"]
+
+
+def test_economics_expected_deaths_is_null_not_zero_when_nothing_is_estimable(client, auth_headers):
+    headers, _ = auth_headers()
+    body = client.get("/api/v1/economics/dashboard", headers=headers).json()
+    assert body["referrals_by_condition"] == []
+    assert body["expected_deaths_at_stake"] is None
