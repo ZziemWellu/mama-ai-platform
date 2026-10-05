@@ -44,8 +44,25 @@ def make_facility():
 
 @pytest.fixture
 def register_user(client):
+    PRIVILEGED = {"ADMIN", "DISTRICT_HEALTH_OFFICER"}
+
     def _register(phone_number=None, password="supersecret1", role="MIDWIFE", facility_id=None):
         phone_number = phone_number or f"024{uuid.uuid4().int % 10_000_000:07d}"
+        if role in PRIVILEGED:
+            # Self-registration can no longer create these roles; tests create them directly, as an admin would.
+            from app.core.auth import hash_password
+            from app.models import User
+            db = SessionLocal()
+            try:
+                db_user = User(phone_number=phone_number, full_name="Test User", password_hash=hash_password(password),
+                               role=role, facility_id=uuid.UUID(facility_id) if facility_id else None)
+                db.add(db_user)
+                db.commit()
+                db.refresh(db_user)
+                user_id = str(db_user.id)
+            finally:
+                db.close()
+            return {"phone_number": phone_number, "password": password, "id": user_id, "role": role}
         payload = {"phone_number": phone_number, "full_name": "Test User", "password": password, "role": role}
         if facility_id:
             payload["facility_id"] = facility_id

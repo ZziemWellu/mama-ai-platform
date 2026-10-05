@@ -1,14 +1,17 @@
+from typing import Optional
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 import uuid
 
-from app.core.auth import create_access_token, get_current_user, hash_password, verify_password
+from app.core.auth import create_access_token, get_current_user, get_optional_user, hash_password, verify_password
 from app.core.database import get_db
 from app.enums import Role
 from app.models import User
 from app.schemas import UserCreate, UserOut, LoginRequest, Token
 
 router = APIRouter()
+
+SELF_REGISTRABLE_ROLES = {Role.COMMUNITY_HEALTH_WORKER.value, Role.MIDWIFE.value}
 
 def _user_out(user: User) -> UserOut:
     return UserOut(
@@ -17,13 +20,18 @@ def _user_out(user: User) -> UserOut:
     )
 
 @router.post("/register", response_model=UserOut)
-async def register_user(user: UserCreate, db: Session = Depends(get_db)):
+async def register_user(user: UserCreate, db: Session = Depends(get_db), caller: Optional[User] = Depends(get_optional_user)):
     existing = db.query(User).filter(User.phone_number == user.phone_number).first()
     if existing:
         raise HTTPException(status_code=400, detail="Phone number already registered")
 
     if user.role not in {r.value for r in Role}:
         raise HTTPException(status_code=400, detail=f"role must be one of {[r.value for r in Role]}")
+
+    # Self-registration can never create a privileged account. Anyone can register as a community
+    # health worker or midwife; an administrator or district officer can only be created by a logged-in admin.
+    if user.role not in SELF_REGISTRABLE_ROLES and (caller is None or caller.role != Role.ADMIN.value):
+        raise HTTPException(status_code=403, detail="Only an administrator can create this role")
 
     db_user = User(
         id=uuid.uuid4(),

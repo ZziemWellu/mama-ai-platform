@@ -1,3 +1,4 @@
+from typing import Optional
 """Real authentication: password hashing + JWT issuance/verification, and the FastAPI dependencies
 every route touching patient data is protected by. Replaces the previous login, which only checked
 that a phone number existed (no password check at all — User had no password column) and returned a
@@ -57,6 +58,22 @@ def get_current_user(
     if user is None or not user.is_active:
         raise unauthorized
     return user
+
+
+bearer_optional = HTTPBearer(auto_error=False)
+
+
+def get_optional_user(
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(bearer_optional),
+    db: Session = Depends(get_db),
+) -> Optional[User]:
+    """The logged-in user if a valid token is sent, otherwise None. Never raises."""
+    if credentials is None:
+        return None
+    try:
+        return get_current_user(credentials, db)
+    except HTTPException:
+        return None
 
 
 def require_role(*allowed_roles: Role):
