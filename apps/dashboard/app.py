@@ -99,14 +99,10 @@ if role == "👩‍⚕️ Midwife":
 elif role == "🏥 District Officer":
     st.subheader("📊 District Health Intelligence")
     col1, col2, col3 = st.columns(3)
-    with col1: st.metric("📍 High Risk Facilities", "4 of 12", delta="-1")
-    with col2: st.metric("💰 Cost Savings (GHS)", "47,200", delta="+12%")
-    with col3: st.metric("👶 DALYs Averted", "187", delta="+23")
-    
-    data = pd.DataFrame({'Facility': ['Ejura', 'Nkwanta', 'Mampong'], 'Cost Savings': [28400, 12600, 6200]})
-    fig = px.bar(data, x='Facility', y='Cost Savings', title='Cost Savings by Facility', color='Cost Savings', color_continuous_scale='Greens')
-    fig.update_layout(height=300)
-    st.plotly_chart(fig, width="stretch")
+    with col1: st.metric("📍 High Risk Facilities", "Not yet calculated")
+    with col2: st.metric("💰 Cost Savings (GHS)", "Not yet estimated")
+    with col3: st.metric("👶 DALYs Averted", "Not yet estimated")
+    st.info("These figures appear once real referral outcome and costing data exist. No numbers are shown until then.")
 
 # ============ PREGNANT WOMAN VIEW ============
 else:

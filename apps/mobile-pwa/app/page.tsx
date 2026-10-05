@@ -34,7 +34,7 @@ import FacilityMap from "./components/FacilityMap";
 import MaternalTimeline from "./components/features/MaternalTimeline";
 import CommunityHealthWorkerMode from "./components/features/CommunityHealthWorkerMode";
 import VoiceAssistant from "./components/features/VoiceAssistant";
-import LiveNationalDashboard from "./components/features/LiveNationalDashboard";
+import ImpactStats from "./components/features/ImpactStats";
 import GuidedDemo from "./components/features/demo/GuidedDemo";
 import ExplainableAIVisual from "./components/features/visualizations/ExplainableAIVisual";
 import HealthEconomicsVisual from "./components/features/visualizations/HealthEconomicsVisual";
@@ -188,29 +188,8 @@ export default function HomePage() {
           </section>
         )}
 
-        {/* Live Impact Stats */}
-        <section className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 text-center">
-            <p className="text-3xl font-bold text-red-600">24</p>
-            <p className="text-sm text-gray-500">High-Risk Mothers</p>
-            <p className="text-xs text-gray-400">Detected this month</p>
-          </div>
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 text-center">
-            <p className="text-3xl font-bold text-blue-600">18</p>
-            <p className="text-sm text-gray-500">Emergency Referrals</p>
-            <p className="text-xs text-gray-400">Successfully completed</p>
-          </div>
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 text-center">
-            <p className="text-3xl font-bold text-green-600">GHS 47.2k</p>
-            <p className="text-sm text-gray-500">Cost Savings</p>
-            <p className="text-xs text-gray-400">From early intervention</p>
-          </div>
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 text-center">
-            <p className="text-3xl font-bold text-purple-600">187</p>
-            <p className="text-sm text-gray-500">DALYs Averted</p>
-            <p className="text-xs text-gray-400">Lives improved</p>
-          </div>
-        </section>
+        {/* Live impact stats: real API figures only */}
+        <ImpactStats />
 
         {/* Core Capabilities */}
         <section>
@@ -381,7 +360,11 @@ export default function HomePage() {
           {activeTab === "timeline" && <MaternalTimeline />}
           {activeTab === "chw" && <CommunityHealthWorkerMode />}
           {activeTab === "voice" && <VoiceAssistant />}
-          {activeTab === "national" && <LiveNationalDashboard />}
+          {activeTab === "national" && (
+            <div className="bg-white rounded-2xl p-6 border border-gray-100 text-gray-600">
+              National figures will appear here once real district data is connected. Nothing is shown until then.
+            </div>
+          )}
         </div>
 
         {/* Research Validation Footer */}

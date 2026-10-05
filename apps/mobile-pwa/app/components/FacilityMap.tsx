@@ -39,81 +39,8 @@ export default function FacilityMap() {
       const data = await response.json()
       setFacilities(data.facilities || [])
     } catch (error) {
-      // Enhanced mock data with capabilities
-      setFacilities([
-        {
-          id: '1',
-          name: 'Ejura District Hospital',
-          type: 'District Hospital',
-          latitude: 7.3833,
-          longitude: -1.3667,
-          distance_km: 0.5,
-          travel_minutes: 5,
-          phone: '+233 24 123 4567',
-          has_csection: true,
-          has_blood_bank: true,
-          has_theatre: true,
-          has_icu: true,
-          has_obstetrician: true,
-          has_ambulance: true,
-          rating: 4.5,
-          reason: 'Nearest facility with C-section, blood bank, and 24-hour theatre'
-        },
-        {
-          id: '2',
-          name: 'Nkwanta Health Centre',
-          type: 'Health Centre',
-          latitude: 7.3500,
-          longitude: -1.4000,
-          distance_km: 18,
-          travel_minutes: 30,
-          phone: '+233 24 765 4321',
-          has_csection: false,
-          has_blood_bank: false,
-          has_theatre: false,
-          has_icu: false,
-          has_obstetrician: false,
-          has_ambulance: true,
-          rating: 3.8,
-          reason: 'Closest facility with ambulance services'
-        },
-        {
-          id: '3',
-          name: 'Mampong District Hospital',
-          type: 'District Hospital',
-          latitude: 7.3000,
-          longitude: -1.4200,
-          distance_km: 25,
-          travel_minutes: 42,
-          phone: '+233 24 333 4444',
-          has_csection: true,
-          has_blood_bank: true,
-          has_theatre: true,
-          has_icu: false,
-          has_obstetrician: true,
-          has_ambulance: true,
-          rating: 4.2,
-          reason: 'Specialist obstetric care with C-section and blood bank'
-        },
-        {
-          id: '4',
-          name: 'Kintampo Maternal Waiting Home',
-          type: 'Waiting Home',
-          latitude: 7.4000,
-          longitude: -1.3500,
-          distance_km: 9,
-          travel_minutes: 15,
-          phone: '+233 24 555 6666',
-          has_csection: false,
-          has_blood_bank: false,
-          has_theatre: false,
-          has_icu: false,
-          has_obstetrician: false,
-          has_ambulance: false,
-          rating: 4.0,
-          reason: 'Safe waiting home for pregnant women near term'
-        }
-      ])
+      // Never invent facilities. An empty list is shown when the live list cannot be loaded.
+      setFacilities([])
     } finally {
       setLoading(false)
     }

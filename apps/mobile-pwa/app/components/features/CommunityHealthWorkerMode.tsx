@@ -29,8 +29,8 @@ export default function CommunityHealthWorkerMode({ onPatientSelect }: CHWModePr
   const [selectedPatient, setSelectedPatient] = useState<Patient | null>(null)
 
   useEffect(() => {
-    // Load mock patient data
-    loadMockPatients()
+    // No patients are invented. Patients appear only when entered or synced.
+    clearPatients()
     const handleOnline = () => setIsOnline(true)
     const handleOffline = () => setIsOnline(false)
     window.addEventListener('online', handleOnline)
@@ -41,67 +41,8 @@ export default function CommunityHealthWorkerMode({ onPatientSelect }: CHWModePr
     }
   }, [])
 
-  const loadMockPatients = () => {
-    setPatients([
-      {
-        id: 'P001',
-        name: 'Ama Mensah',
-        village: 'Nkwanta',
-        phone: '+233 24 111 2222',
-        gestation_weeks: 38,
-        due_date: '2026-07-15',
-        last_visit: '2026-06-20',
-        status: 'monitoring',
-        missed_appointments: 0
-      },
-      {
-        id: 'P002',
-        name: 'Esi Ofori',
-        village: 'Ejura',
-        phone: '+233 24 333 4444',
-        gestation_weeks: 36,
-        due_date: '2026-07-28',
-        last_visit: '2026-06-18',
-        status: 'registered',
-        risk_level: 'HIGH',
-        missed_appointments: 1
-      },
-      {
-        id: 'P003',
-        name: 'Akua Adjei',
-        village: 'Kintampo',
-        phone: '+233 24 555 6666',
-        gestation_weeks: 40,
-        due_date: '2026-06-28',
-        last_visit: '2026-06-22',
-        status: 'due',
-        risk_level: 'CRITICAL',
-        missed_appointments: 0
-      },
-      {
-        id: 'P004',
-        name: 'Abena Kwarteng',
-        village: 'Mampong',
-        phone: '+233 24 777 8888',
-        gestation_weeks: 34,
-        due_date: '2026-08-10',
-        last_visit: '2026-06-15',
-        status: 'registered',
-        missed_appointments: 0
-      },
-      {
-        id: 'P005',
-        name: 'Yaa Asantewaa',
-        village: 'Takoradi',
-        phone: '+233 24 999 0000',
-        gestation_weeks: 39,
-        due_date: '2026-07-05',
-        last_visit: '2026-06-19',
-        status: 'emergency',
-        risk_level: 'CRITICAL',
-        missed_appointments: 2
-      }
-    ])
+  const clearPatients = () => {
+    setPatients([])
   }
 
   const getStatusBadge = (status: string) => {
