@@ -1,0 +1,14 @@
+{
+  "name": "mobile-pwa-visual-check",
+  "private": true,
+  "description": "Pixel comparison of the mobile app's public pages between two builds",
+  "scripts": {
+    "capture": "node capture.js",
+    "compare": "node compare.js"
+  },
+  "dependencies": {
+    "pixelmatch": "^5.3.0",
+    "pngjs": "^7.0.0",
+    "puppeteer-core": "^23.0.0"
+  }
+}

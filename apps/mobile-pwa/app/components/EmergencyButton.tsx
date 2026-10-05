@@ -26,13 +26,13 @@ export default function EmergencyButton() {
           flex items-center justify-center gap-6
           transition-all duration-300 transform
           ${isPressed ? 'scale-95' : isHovered ? 'scale-105' : 'scale-100'}
-          bg-gradient-to-r from-red-600 via-red-700 to-red-800
+          bg-linear-to-r from-red-600 via-red-700 to-red-800
           shadow-2xl hover:shadow-3xl
           animate-pulse
           relative overflow-hidden
         `}
       >
-        <div className="absolute inset-0 bg-gradient-to-r from-red-500 via-red-600 to-red-700 opacity-50 animate-pulse" />
+        <div className="absolute inset-0 bg-linear-to-r from-red-500 via-red-600 to-red-700 opacity-50 animate-pulse" />
         <div className="relative z-10 flex items-center gap-4">
           <AlertTriangle className="w-12 h-12 animate-bounce" />
           <span className="tracking-wider">🚨 EMERGENCY</span>

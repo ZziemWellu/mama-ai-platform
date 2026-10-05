@@ -127,7 +127,7 @@ export default function GuidedDemo({ onClose }: GuidedDemoProps) {
   return (
     <div className="bg-white rounded-2xl shadow-2xl border border-gray-200 overflow-hidden">
       {/* Header */}
-      <div className="bg-gradient-to-r from-teal-600 to-emerald-600 text-white p-6">
+      <div className="bg-linear-to-r from-teal-600 to-emerald-600 text-white p-6">
         <div className="flex justify-between items-center">
           <div className="flex items-center gap-3">
             <Sparkles className="w-6 h-6" />
@@ -153,7 +153,7 @@ export default function GuidedDemo({ onClose }: GuidedDemoProps) {
           <div className="space-y-6">
             {/* Step Info */}
             <div className="flex items-start gap-4">
-              <div className={`w-12 h-12 rounded-2xl ${steps[currentStep].color} flex items-center justify-center flex-shrink-0 shadow-lg`}>
+              <div className={`w-12 h-12 rounded-2xl ${steps[currentStep].color} flex items-center justify-center shrink-0 shadow-lg`}>
                 <StepIcon className="w-6 h-6 text-white" />
               </div>
               <div className="flex-1">

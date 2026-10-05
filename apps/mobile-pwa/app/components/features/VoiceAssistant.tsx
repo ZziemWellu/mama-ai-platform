@@ -341,7 +341,7 @@ export default function VoiceAssistant({ onAssessmentComplete }: VoiceAssistantP
     <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-purple-500 to-purple-600 flex items-center justify-center">
+          <div className="w-10 h-10 rounded-xl bg-linear-to-br from-purple-500 to-purple-600 flex items-center justify-center">
             <Volume2 className="w-5 h-5 text-white" />
           </div>
           <div>
@@ -378,7 +378,7 @@ export default function VoiceAssistant({ onAssessmentComplete }: VoiceAssistantP
           <span>{getProgress()}%</span>
         </div>
         <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-          <div className="h-full bg-gradient-to-r from-purple-500 to-purple-600 rounded-full transition-all duration-500" style={{ width: `${getProgress()}%` }} />
+          <div className="h-full bg-linear-to-r from-purple-500 to-purple-600 rounded-full transition-all duration-500" style={{ width: `${getProgress()}%` }} />
         </div>
       </div>
 

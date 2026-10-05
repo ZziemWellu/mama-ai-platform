@@ -118,11 +118,11 @@ export default function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center gap-2">
-            <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-teal-600 to-emerald-600 flex items-center justify-center shadow-lg">
+            <div className="w-9 h-9 rounded-xl bg-linear-to-br from-teal-600 to-emerald-600 flex items-center justify-center shadow-lg">
               <Heart className="w-4 h-4 text-white" />
             </div>
             <div>
-              <span className="text-lg font-bold bg-gradient-to-r from-teal-700 to-emerald-700 bg-clip-text text-transparent">
+              <span className="text-lg font-bold bg-linear-to-r from-teal-700 to-emerald-700 bg-clip-text text-transparent">
                 MAMA-AI
               </span>
               <span className="text-[10px] text-gray-400 block -mt-0.5 font-medium tracking-wider uppercase">

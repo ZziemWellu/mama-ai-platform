@@ -131,7 +131,7 @@ export default function ExplainableAIVisual({
         {/* Summary */}
         <div className="mt-4 p-3 bg-amber-50 rounded-lg border border-amber-200">
           <p className="text-xs text-amber-700 flex items-start gap-2">
-            <AlertTriangle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+            <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
             <span>
               <span className="font-semibold">Why {prediction}?</span> Bleeding Volume is the primary driver,
               combined with elevated blood pressure and gestational age. Immediate intervention recommended.

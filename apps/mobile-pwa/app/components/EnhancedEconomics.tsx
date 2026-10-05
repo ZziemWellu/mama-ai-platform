@@ -101,7 +101,7 @@ export default function EnhancedEconomics() {
       </div>
 
       {data.expected_deaths_at_stake != null && (
-        <div className="bg-gradient-to-r from-rose-50 to-rose-100 rounded-2xl p-4 border border-rose-200">
+        <div className="bg-linear-to-r from-rose-50 to-rose-100 rounded-2xl p-4 border border-rose-200">
           <p className="text-sm text-gray-600">Expected maternal deaths at stake in referred cases</p>
           <p className="text-2xl font-bold text-rose-700">{data.expected_deaths_at_stake.toFixed(2)}</p>
           <p className="text-xs text-gray-500 mt-1">
@@ -112,7 +112,7 @@ export default function EnhancedEconomics() {
       )}
 
       {data.average_icer_usd_per_daly != null && (
-        <div className="bg-gradient-to-r from-indigo-50 to-indigo-100 rounded-2xl p-4 border border-indigo-200">
+        <div className="bg-linear-to-r from-indigo-50 to-indigo-100 rounded-2xl p-4 border border-indigo-200">
           <div className="flex items-center gap-2">
             <Award className="w-5 h-5 text-indigo-600" />
             <p className="text-sm text-gray-600">Cost-Effectiveness (ICER)</p>
@@ -172,7 +172,7 @@ export default function EnhancedEconomics() {
 
       {!hasOutcomeEstimates && (
         <div className="bg-gray-50 rounded-2xl p-4 border border-gray-200 flex gap-3">
-          <Info className="w-5 h-5 text-gray-500 flex-shrink-0 mt-0.5" />
+          <Info className="w-5 h-5 text-gray-500 shrink-0 mt-0.5" />
           <p className="text-xs text-gray-600">
             Cost savings and DALYs averted will appear once referral outcomes (arrival, treatment, survival) and
             facility costs are recorded. Until then MAMA-AI reports only what it measures directly, rather than

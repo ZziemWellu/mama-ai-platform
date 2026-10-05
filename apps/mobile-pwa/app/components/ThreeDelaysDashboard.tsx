@@ -137,7 +137,7 @@ export default function ThreeDelaysDashboard() {
       </div>
 
       {/* Total Delay */}
-      <div className="bg-gradient-to-r from-teal-600 to-emerald-600 text-white rounded-2xl p-6">
+      <div className="bg-linear-to-r from-teal-600 to-emerald-600 text-white rounded-2xl p-6">
         <div className="flex justify-between items-center">
           <div>
             <p className="text-sm opacity-80">Average Total Delay</p>
@@ -228,7 +228,7 @@ export default function ThreeDelaysDashboard() {
       {/* Summary Footer */}
       <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
         <p className="text-sm text-amber-800 flex items-start gap-2">
-          <AlertCircle className="w-5 h-5 flex-shrink-0 mt-0.5" />
+          <AlertCircle className="w-5 h-5 shrink-0 mt-0.5" />
           <span>
             <span className="font-semibold">Key Insight:</span> Transportation delays are the biggest bottleneck.
             MAMA-AI's referral coordination system reduces this by up to 31%.

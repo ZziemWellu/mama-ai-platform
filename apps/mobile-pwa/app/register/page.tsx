@@ -45,7 +45,7 @@ export default function RegisterPage() {
     <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-6">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-600 to-emerald-600 flex items-center justify-center shadow-lg mx-auto mb-3">
+          <div className="w-14 h-14 rounded-2xl bg-linear-to-br from-teal-600 to-emerald-600 flex items-center justify-center shadow-lg mx-auto mb-3">
             <Heart className="w-7 h-7 text-white" />
           </div>
           <h1 className="text-xl font-bold text-gray-800">Register for MAMA-AI</h1>

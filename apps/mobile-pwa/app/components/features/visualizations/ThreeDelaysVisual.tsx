@@ -73,7 +73,7 @@ export default function ThreeDelaysVisual() {
                 </div>
                 <div className="mt-2 w-full h-2 bg-gray-200 rounded-full overflow-hidden">
                   <div
-                    className={`h-full rounded-full bg-gradient-to-r ${delay.color}`}
+                    className={`h-full rounded-full bg-linear-to-r ${delay.color}`}
                     style={{ width: `${delay.data.value}%` }}
                   />
                 </div>
@@ -85,7 +85,7 @@ export default function ThreeDelaysVisual() {
         {/* Insight */}
         <div className="p-4 bg-amber-50 rounded-xl border border-amber-200">
           <div className="flex items-start gap-2">
-            <AlertCircle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+            <AlertCircle className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
             <div>
               <p className="font-semibold text-amber-800">Key Insight</p>
               <p className="text-sm text-amber-700">
@@ -99,7 +99,7 @@ export default function ThreeDelaysVisual() {
         {/* How MAMA-AI Helps */}
         <div className="p-4 bg-teal-50 rounded-xl border border-teal-200">
           <div className="flex items-start gap-2">
-            <CheckCircle className="w-5 h-5 text-teal-600 flex-shrink-0 mt-0.5" />
+            <CheckCircle className="w-5 h-5 text-teal-600 shrink-0 mt-0.5" />
             <div>
               <p className="font-semibold text-teal-800">How MAMA-AI Addresses These Delays</p>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mt-2 text-sm text-teal-700">

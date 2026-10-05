@@ -91,7 +91,7 @@ export default function HomePage() {
   return (
     <div className="min-h-screen bg-slate-50">
       {/* Ghana Flag Bar */}
-      <div className="h-1 bg-gradient-to-r from-[#CE1126] via-[#FCD116] to-[#006B3F]" />
+      <div className="h-1 bg-linear-to-r from-[#CE1126] via-[#FCD116] to-[#006B3F]" />
 
       {/* Navigation */}
       <Navbar />
@@ -99,14 +99,14 @@ export default function HomePage() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 py-6 space-y-8">
         {/* Hero Section */}
-        <section className="bg-gradient-to-r from-teal-950 via-teal-800 to-emerald-700 text-white rounded-3xl p-8 md:p-12 shadow-2xl relative overflow-hidden">
+        <section className="bg-linear-to-r from-teal-950 via-teal-800 to-emerald-700 text-white rounded-3xl p-8 md:p-12 shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/3" />
           <div className="absolute bottom-0 left-0 w-48 h-48 bg-white/5 rounded-full translate-y-1/2 -translate-x-1/3" />
           <div className="relative z-10 max-w-3xl">
             <span className="inline-block px-4 py-1.5 rounded-full text-sm font-medium bg-white/20 backdrop-blur-sm mb-4">
               🏆 Ghana AI Innovation Challenge 2026
             </span>
-            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
+            <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold leading-tight md:leading-none lg:leading-none">
               <span className="text-emerald-300">No mother should die</span>
               <br />
               because help is too far away.
@@ -201,7 +201,7 @@ export default function HomePage() {
             {coreFeatures.map((feature, index) => {
               const Icon = feature.icon
               return (
-                <div key={index} className={`bg-gradient-to-br ${feature.color} text-white p-6 rounded-2xl shadow-md hover:shadow-xl transition-all hover:-translate-y-1`}>
+                <div key={index} className={`bg-linear-to-br ${feature.color} text-white p-6 rounded-2xl shadow-md hover:shadow-xl transition-all hover:-translate-y-1`}>
                   <Icon className="w-8 h-8 mb-3" />
                   <p className="font-semibold text-lg">{feature.title}</p>
                   <p className="text-xs opacity-80 mt-1">{feature.desc}</p>
@@ -272,7 +272,7 @@ export default function HomePage() {
         </section>
 
         {/* Why MAMA-AI */}
-        <section className="bg-gradient-to-r from-teal-50 to-emerald-50 rounded-2xl p-6 border border-teal-200">
+        <section className="bg-linear-to-r from-teal-50 to-emerald-50 rounded-2xl p-6 border border-teal-200">
           <h2 className="text-xl font-bold text-gray-800 mb-4 flex items-center gap-2">
             <Award className="w-5 h-5 text-teal-600" />
             Why MAMA-AI is Different
@@ -290,7 +290,7 @@ export default function HomePage() {
             ].map((item, index) => (
               <div key={index} className="bg-white rounded-xl p-4 shadow-sm border border-gray-100">
                 <div className="flex items-start gap-2">
-                  <CheckCircle className="w-5 h-5 text-teal-600 flex-shrink-0 mt-0.5" />
+                  <CheckCircle className="w-5 h-5 text-teal-600 shrink-0 mt-0.5" />
                   <div>
                     <p className="font-semibold text-gray-800">{item.title}</p>
                     <p className="text-xs text-gray-500">{item.desc}</p>
@@ -368,7 +368,7 @@ export default function HomePage() {
         </div>
 
         {/* Research Validation Footer */}
-        <div className="bg-gradient-to-r from-teal-50 to-emerald-50 rounded-2xl p-6 border border-teal-100">
+        <div className="bg-linear-to-r from-teal-50 to-emerald-50 rounded-2xl p-6 border border-teal-100">
           <div className="flex items-center gap-2 mb-3">
             <Award className="w-5 h-5 text-teal-600" />
             <h3 className="font-semibold text-gray-800">Research-Backed Innovation</h3>
