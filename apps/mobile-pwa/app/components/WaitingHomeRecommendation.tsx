@@ -29,6 +29,7 @@ interface Recommendation {
 export default function WaitingHomeRecommendation() {
   const [loading, setLoading] = useState(false)
   const [result, setResult] = useState<Recommendation | null>(null)
+  const [serviceError, setServiceError] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     patient_id: 'P003',
     latitude: 7.3833,
@@ -45,6 +46,7 @@ export default function WaitingHomeRecommendation() {
 
   const handleRecommend = async () => {
     setLoading(true)
+    setServiceError(null)
     try {
       const response = await fetch(
         'https://mama-ai-access-risk.onrender.com/api/v1/access-risk/assess',
@@ -54,78 +56,24 @@ export default function WaitingHomeRecommendation() {
           body: JSON.stringify(formData)
         }
       )
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
       const data = await response.json()
-      
+      // Accept only what the service returns. No risk level, score or waiting home is ever made up.
+      if (!data.access_risk_level || typeof data.risk_score !== 'number') {
+        throw new Error('incomplete response from the risk service')
+      }
       setResult({
-        risk_level: data.access_risk_level || 'HIGH',
-        risk_score: data.risk_score || 78,
-        recommendation: data.recommendation || 'Relocate to waiting home within 48 hours',
+        risk_level: data.access_risk_level,
+        risk_score: data.risk_score,
+        recommendation: data.recommendation ?? '',
         rationale: generateRationale(formData),
-        waiting_homes: data.waiting_homes || [
-          {
-            id: '1',
-            name: 'Kintampo Maternal Waiting Home',
-            district: 'Kintampo',
-            distance_km: 9,
-            estimated_travel_time_minutes: 15,
-            phone: '+233 24 555 6666',
-            capacity: 24,
-            occupied_beds: 6,
-            available_beds: 18,
-            has_ambulance: false
-          },
-          {
-            id: '2',
-            name: 'Ejura Waiting Home',
-            district: 'Ejura',
-            distance_km: 4,
-            estimated_travel_time_minutes: 8,
-            phone: '+233 24 777 8888',
-            capacity: 16,
-            occupied_beds: 4,
-            available_beds: 12,
-            has_ambulance: true
-          }
-        ],
-        recommended_arrival: 'Within 48 hours',
+        waiting_homes: Array.isArray(data.waiting_homes) ? data.waiting_homes : [],
+        recommended_arrival: data.recommended_arrival ?? '',
         risk_factors: generateRiskFactors(formData)
       })
     } catch (error) {
-      // Enhanced mock result with rationale
-      setResult({
-        risk_level: 'HIGH',
-        risk_score: 78,
-        recommendation: 'Relocate to waiting home within 48 hours',
-        rationale: generateRationale(formData),
-        waiting_homes: [
-          {
-            id: '1',
-            name: 'Kintampo Maternal Waiting Home',
-            district: 'Kintampo',
-            distance_km: 9,
-            estimated_travel_time_minutes: 15,
-            phone: '+233 24 555 6666',
-            capacity: 24,
-            occupied_beds: 6,
-            available_beds: 18,
-            has_ambulance: false
-          },
-          {
-            id: '2',
-            name: 'Ejura Waiting Home',
-            district: 'Ejura',
-            distance_km: 4,
-            estimated_travel_time_minutes: 8,
-            phone: '+233 24 777 8888',
-            capacity: 16,
-            occupied_beds: 4,
-            available_beds: 12,
-            has_ambulance: true
-          }
-        ],
-        recommended_arrival: 'Within 48 hours',
-        risk_factors: generateRiskFactors(formData)
-      })
+      setResult(null)
+      setServiceError('The risk service could not be reached, so no risk level is shown. Use your clinical judgement and contact the nearest facility now.')
     } finally {
       setLoading(false)
     }
@@ -259,6 +207,9 @@ export default function WaitingHomeRecommendation() {
       </div>
 
       {/* Results */}
+      {serviceError && (
+        <div className="rounded-xl bg-red-50 border border-red-200 p-4 text-red-800 text-sm">{serviceError}</div>
+      )}
       {result && (
         <div className={`${getRiskColor(result.risk_level)} text-white rounded-2xl p-6`}>
           <div className="flex justify-between items-start">
