@@ -60,7 +60,7 @@ export default function GhanaMap() {
 
       <div className="p-6">
         {/* Map Container */}
-        <div className="relative bg-gradient-to-b from-teal-50 to-blue-50 rounded-2xl p-8 min-h-[400px] border-2 border-dashed border-teal-200">
+        <div className="relative bg-linear-to-b from-teal-50 to-blue-50 rounded-2xl p-8 min-h-[400px] border-2 border-dashed border-teal-200">
           {/* Map Background */}
           <div className="absolute inset-0 flex items-center justify-center opacity-10">
             <div className="text-center">

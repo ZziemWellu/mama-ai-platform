@@ -238,7 +238,7 @@ export default function WaitingHomeRecommendation() {
             <ul className="mt-2 space-y-1.5">
               {result.risk_factors.map((factor, index) => (
                 <li key={index} className="flex items-start gap-2 text-sm">
-                  <CheckCircle className="w-4 h-4 flex-shrink-0 mt-0.5" />
+                  <CheckCircle className="w-4 h-4 shrink-0 mt-0.5" />
                   <span>{factor}</span>
                 </li>
               ))}

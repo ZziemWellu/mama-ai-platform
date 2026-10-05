@@ -35,7 +35,7 @@ export default function FloatingEmergencyButton() {
         className={`w-16 h-16 rounded-full shadow-2xl transition-all duration-300 flex items-center justify-center ${
           isOpen 
             ? 'bg-gray-800 rotate-90' 
-            : 'bg-gradient-to-r from-red-600 to-red-700 hover:scale-110 animate-pulse'
+            : 'bg-linear-to-r from-red-600 to-red-700 hover:scale-110 animate-pulse'
         }`}
         aria-label="Emergency"
       >

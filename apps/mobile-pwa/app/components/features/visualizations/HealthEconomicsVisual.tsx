@@ -50,7 +50,7 @@ export default function HealthEconomicsVisual({ costSaved, dalys, icer, roi }: H
           </div>
           {roi != null && (
             <div className="w-full h-3 bg-gray-100 rounded-full overflow-hidden">
-              <div className="h-full bg-gradient-to-r from-teal-500 to-emerald-500 rounded-full" style={{ width: `${Math.min(roi * 25, 100)}%` }} />
+              <div className="h-full bg-linear-to-r from-teal-500 to-emerald-500 rounded-full" style={{ width: `${Math.min(roi * 25, 100)}%` }} />
             </div>
           )}
         </div>
